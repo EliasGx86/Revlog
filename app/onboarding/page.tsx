@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { BodyType, Plan } from "@/lib/types";
+import type { BodyType } from "@/lib/types";
 
 // Downscale a photo client-side so uploads stay small (phone photos are huge).
 async function fileToDataUrl(file: File, maxDim = 1280): Promise<string> {
@@ -19,12 +19,14 @@ async function fileToDataUrl(file: File, maxDim = 1280): Promise<string> {
 // Text input with a camera button that photographs the VIN / plate and OCRs it.
 function ScanInput({
   kind,
+  label,
   placeholder,
   value,
   maxLength,
   onChange,
 }: {
   kind: "vin" | "plate";
+  label: string;
   placeholder: string;
   value: string;
   maxLength: number;
@@ -59,8 +61,10 @@ function ScanInput({
 
   return (
     <div>
-      <div className="flex gap-1.5">
+      <label htmlFor={`scan-${kind}`} className="text-sm text-muted">{label}</label>
+      <div className="mt-1 flex gap-1.5">
         <input
+          id={`scan-${kind}`}
           className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 font-mono uppercase placeholder:font-sans placeholder:normal-case"
           placeholder={placeholder}
           value={value}
@@ -102,6 +106,20 @@ const BODY_TYPES: { value: BodyType; label: string }[] = [
   { value: "motorcycle", label: "Motorcycle" },
 ];
 
+// Tap-friendly preset swatches — much easier than a native color wheel on mobile.
+const COLORS: { value: string; label: string }[] = [
+  { value: "#f2f2f2", label: "White" },
+  { value: "#111114", label: "Black" },
+  { value: "#c7c9cc", label: "Silver" },
+  { value: "#6b6f75", label: "Gray" },
+  { value: "#cc2222", label: "Red" },
+  { value: "#1e4fd8", label: "Blue" },
+  { value: "#1f7a3d", label: "Green" },
+  { value: "#e46b1a", label: "Orange" },
+  { value: "#e8c020", label: "Yellow" },
+  { value: "#6b4a2f", label: "Brown" },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
@@ -109,12 +127,11 @@ export default function OnboardingPage() {
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState<number>(new Date().getFullYear());
-  const [color, setColor] = useState("#cc0000");
+  const [color, setColor] = useState(COLORS[4].value); // Red
   const [bodyType, setBodyType] = useState<BodyType>("sedan");
   const [mileage, setMileage] = useState<number>(0);
   const [vin, setVin] = useState("");
   const [plate, setPlate] = useState("");
-  const [plan, setPlan] = useState<Plan>("monthly");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -139,15 +156,15 @@ export default function OnboardingPage() {
       });
       if (vErr) throw vErr;
 
-      // Send to Stripe checkout. On success, webhook flips profile.onboarded = true.
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Checkout failed");
-      window.location.href = json.url;
+      // BETA: free for everyone — no checkout. Mark onboarding complete and go.
+      const { error: pErr } = await supabase
+        .from("profiles")
+        .update({ onboarded: true })
+        .eq("id", user.id);
+      if (pErr) throw pErr;
+
+      router.push("/");
+      router.refresh();
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
@@ -163,55 +180,73 @@ export default function OnboardingPage() {
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <input
-            className="rounded-md border border-border bg-surface px-3 py-2"
-            placeholder="Make (e.g. Toyota)"
-            value={make}
-            onChange={(e) => setMake(e.target.value)}
-            required
-          />
-          <input
-            className="rounded-md border border-border bg-surface px-3 py-2"
-            placeholder="Model (e.g. Tacoma)"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            required
-          />
+          <div>
+            <label htmlFor="make" className="text-sm text-muted">Make</label>
+            <input
+              id="make"
+              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+              placeholder="e.g. Toyota"
+              value={make}
+              onChange={(e) => setMake(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="model" className="text-sm text-muted">Model</label>
+            <input
+              id="model"
+              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+              placeholder="e.g. Tacoma"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              required
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <input
-            type="number"
-            className="rounded-md border border-border bg-surface px-3 py-2"
-            placeholder="Year"
-            value={year}
-            min={1900}
-            max={2100}
-            onChange={(e) => setYear(parseInt(e.target.value || "0", 10))}
-            required
-          />
-          <input
-            type="number"
-            className="rounded-md border border-border bg-surface px-3 py-2"
-            placeholder="Current mileage"
-            value={mileage}
-            min={0}
-            onChange={(e) => setMileage(parseInt(e.target.value || "0", 10))}
-            required
-          />
+          <div>
+            <label htmlFor="year" className="text-sm text-muted">Year</label>
+            <input
+              id="year"
+              type="number"
+              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+              placeholder="e.g. 2019"
+              value={year}
+              min={1900}
+              max={2100}
+              onChange={(e) => setYear(parseInt(e.target.value || "0", 10))}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="mileage" className="text-sm text-muted">Current mileage</label>
+            <input
+              id="mileage"
+              type="number"
+              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+              placeholder="e.g. 42000"
+              value={mileage}
+              min={0}
+              onChange={(e) => setMileage(parseInt(e.target.value || "0", 10))}
+              required
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <ScanInput
             kind="vin"
-            placeholder="VIN (optional)"
+            label="VIN (optional)"
+            placeholder="Type or scan"
             value={vin}
             maxLength={17}
             onChange={setVin}
           />
           <ScanInput
             kind="plate"
-            placeholder="License plate (optional)"
+            label="License plate (optional)"
+            placeholder="Type or scan"
             value={plate}
             maxLength={10}
             onChange={setPlate}
@@ -238,44 +273,24 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-muted">Color</label>
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            className="h-10 w-16 rounded-md border border-border bg-surface"
-          />
-          <span className="text-sm text-muted">{color}</span>
-        </div>
-
         <div>
-          <label className="text-sm text-muted">Plan</label>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPlan("monthly")}
-              className={`rounded-md border px-3 py-3 text-sm transition ${
-                plan === "monthly"
-                  ? "border-accent bg-accent/10"
-                  : "border-border bg-surface"
-              }`}
-            >
-              <div className="font-medium">Monthly</div>
-              <div className="text-xs text-muted">Billed every month</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPlan("yearly")}
-              className={`rounded-md border px-3 py-3 text-sm transition ${
-                plan === "yearly"
-                  ? "border-accent bg-accent/10"
-                  : "border-border bg-surface"
-              }`}
-            >
-              <div className="font-medium">Yearly</div>
-              <div className="text-xs text-muted">Save vs monthly</div>
-            </button>
+          <label className="text-sm text-muted">
+            Color · <span className="text-white">{COLORS.find((c) => c.value === color)?.label ?? color}</span>
+          </label>
+          <div className="mt-2 grid grid-cols-5 gap-2">
+            {COLORS.map((c) => (
+              <button
+                type="button"
+                key={c.value}
+                title={c.label}
+                aria-label={c.label}
+                onClick={() => setColor(c.value)}
+                className={`h-11 rounded-md border-2 transition ${
+                  color === c.value ? "border-accent scale-105" : "border-border"
+                }`}
+                style={{ backgroundColor: c.value }}
+              />
+            ))}
           </div>
         </div>
 
@@ -286,8 +301,11 @@ export default function OnboardingPage() {
           disabled={loading}
           className="w-full rounded-md bg-accent px-3 py-3 font-medium disabled:opacity-50"
         >
-          {loading ? "Redirecting to checkout…" : "Continue to payment"}
+          {loading ? "Setting up your garage…" : "Enter my garage"}
         </button>
+        <p className="text-center text-xs text-muted">
+          RevLog is free while in beta.
+        </p>
       </form>
     </main>
   );

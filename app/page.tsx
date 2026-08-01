@@ -26,12 +26,8 @@ export default async function HomePage() {
 
   if (!vehicle) redirect("/onboarding");
 
-  // Gate behind active subscription. If checkout completed but webhook hasn't
-  // fired yet, profile.subscription_status will be 'incomplete' and we send
-  // them back to onboarding (which will resume at checkout).
-  if (profile.subscription_status !== "active" && profile.subscription_status !== "trialing") {
-    redirect("/onboarding");
-  }
+  // BETA: free for everyone — no subscription gate. When Stripe launches,
+  // restore the check on profile.subscription_status here.
 
   return <HomeClient profile={profile} vehicle={vehicle} />;
 }

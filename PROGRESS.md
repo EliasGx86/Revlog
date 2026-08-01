@@ -21,7 +21,7 @@ Running log of where the project stands. Update at the end of each working sessi
 
 ### Not working yet — blockers to a usable app
 1. **`OPENAI_API_KEY` not set** — chat (the core feature) and photo OCR are dead until this is added in Vercel → Settings → Environment Variables (and `.env.local` for local dev).
-2. **Stripe not configured** — onboarding dead-ends at "Continue to payment". Needs products/prices/keys/webhook, OR temporarily bypass the subscription gate to test the app first.
+2. **Stripe intentionally disabled for beta** — the app is free while in beta: onboarding skips checkout (sets `onboarded=true` directly) and the home page's subscription gate is commented out ([app/page.tsx](app/page.tsx)). The Stripe routes/env plumbing still exist; when beta ends, restore the gate and wire up Stripe products/keys/webhook.
 3. **`SUPABASE_SERVICE_ROLE_KEY` not set** — only needed once Stripe webhooks exist. Copy from Supabase dashboard → Settings → API.
 4. **PostHog key not set** — analytics silently no-op. Optional.
 5. **No user has ever signed up** — the full auth → onboarding → home flow is untested end to end.
@@ -38,4 +38,4 @@ Running log of where the project stands. Update at the end of each working sessi
 
 ## Session log
 
-- **2026-08-01** — Reviewed dormant scaffold; deployed to Vercel (Pro) with GitHub auto-deploy; created Supabase project on upgraded Pro org and applied schema; renamed GarageIQ → RevLog; added VIN/plate tracking with photo OCR and motorcycle body type with 3D model.
+- **2026-08-01** — Reviewed dormant scaffold; deployed to Vercel (Pro) with GitHub auto-deploy; created Supabase project on upgraded Pro org and applied schema; renamed GarageIQ → RevLog; added VIN/plate tracking with photo OCR and motorcycle body type with 3D model. Made the app free for beta (payment step removed, subscription gate off), labeled all onboarding fields, and replaced the color picker with tap-friendly swatches.
