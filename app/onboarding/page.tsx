@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BodyType } from "@/lib/types";
+import { VEHICLE_CATALOG } from "@/lib/vehicle-catalog";
 
 // Downscale a photo client-side so uploads stay small (phone photos are huge).
 async function fileToDataUrl(file: File, maxDim = 1280): Promise<string> {
@@ -124,6 +125,8 @@ export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
+  const [pick, setPick] = useState("");
+  const [requestSent, setRequestSent] = useState(false);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -134,6 +137,39 @@ export default function OnboardingPage() {
   const [plate, setPlate] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function onPick(e: React.ChangeEvent<HTMLSelectElement>) {
+    const v = e.target.value;
+    setPick(v);
+    setRequestSent(false);
+    const cat = VEHICLE_CATALOG.find((c) => c.id === v);
+    if (cat) {
+      setMake(cat.make);
+      setModel(cat.model);
+      setBodyType(cat.bodyType);
+    } else {
+      setMake("");
+      setModel("");
+      setBodyType(v === "motorcycle" ? "motorcycle" : "sedan");
+    }
+  }
+
+  async function requestModel() {
+    setErr(null);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("vehicle_requests").insert({
+        user_id: user.id,
+        make: make.trim(),
+        model: model.trim(),
+      });
+      if (error) throw error;
+      setRequestSent(true);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Couldn't send the request");
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -179,30 +215,73 @@ export default function OnboardingPage() {
       </p>
 
       <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label htmlFor="make" className="text-sm text-muted">Make</label>
-            <input
-              id="make"
-              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
-              placeholder="e.g. Toyota"
-              value={make}
-              onChange={(e) => setMake(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="model" className="text-sm text-muted">Model</label>
-            <input
-              id="model"
-              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
-              placeholder="e.g. Tacoma"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              required
-            />
-          </div>
+        <div>
+          <label htmlFor="pick" className="text-sm text-muted">Vehicle</label>
+          <select
+            id="pick"
+            value={pick}
+            onChange={onPick}
+            required
+            className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2.5"
+          >
+            <option value="" disabled>Choose your vehicle…</option>
+            {VEHICLE_CATALOG.map((v) => (
+              <option key={v.id} value={v.id}>{v.make} {v.model}</option>
+            ))}
+            <option value="motorcycle">Motorcycle</option>
+            <option value="other">My vehicle isn&apos;t listed…</option>
+          </select>
+          {VEHICLE_CATALOG.some((c) => c.id === pick) && (
+            <p className="mt-1 text-xs text-muted">
+              Renders as a {bodyType === "suv" ? "SUV" : bodyType} in your 3D garage.
+            </p>
+          )}
         </div>
+
+        {(pick === "motorcycle" || pick === "other") && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="make" className="text-sm text-muted">Make</label>
+              <input
+                id="make"
+                className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+                placeholder={pick === "motorcycle" ? "e.g. Harley-Davidson" : "e.g. Toyota"}
+                value={make}
+                onChange={(e) => { setMake(e.target.value); setRequestSent(false); }}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="model" className="text-sm text-muted">Model</label>
+              <input
+                id="model"
+                className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
+                placeholder={pick === "motorcycle" ? "e.g. Street Glide" : "e.g. Tacoma"}
+                value={model}
+                onChange={(e) => { setModel(e.target.value); setRequestSent(false); }}
+                required
+              />
+            </div>
+          </div>
+        )}
+
+        {pick === "other" && (
+          <div className="rounded-md border border-border bg-surface/50 p-3">
+            <p className="text-xs text-muted">
+              You can still use RevLog with a generic model — pick the closest body
+              type below. Want a 3D model of your actual vehicle? Request it and
+              we&apos;ll prioritize the most-asked-for cars.
+            </p>
+            <button
+              type="button"
+              disabled={!make.trim() || !model.trim() || requestSent}
+              onClick={requestModel}
+              className="mt-2 rounded-md border border-accent px-3 py-1.5 text-sm text-accent transition disabled:opacity-40"
+            >
+              {requestSent ? "Request sent ✓" : "Request my make & model"}
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -253,25 +332,27 @@ export default function OnboardingPage() {
           />
         </div>
 
-        <div>
-          <label className="text-sm text-muted">Body type</label>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {BODY_TYPES.map((b) => (
-              <button
-                type="button"
-                key={b.value}
-                onClick={() => setBodyType(b.value)}
-                className={`rounded-md border px-3 py-2 text-sm transition ${
-                  bodyType === b.value
-                    ? "border-accent bg-accent/10"
-                    : "border-border bg-surface"
-                }`}
-              >
-                {b.label}
-              </button>
-            ))}
+        {pick === "other" && (
+          <div>
+            <label className="text-sm text-muted">Closest body type</label>
+            <div className="mt-2 grid grid-cols-4 gap-2">
+              {BODY_TYPES.map((b) => (
+                <button
+                  type="button"
+                  key={b.value}
+                  onClick={() => setBodyType(b.value)}
+                  className={`rounded-md border px-3 py-2 text-sm transition ${
+                    bodyType === b.value
+                      ? "border-accent bg-accent/10"
+                      : "border-border bg-surface"
+                  }`}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <div>
           <label className="text-sm text-muted">

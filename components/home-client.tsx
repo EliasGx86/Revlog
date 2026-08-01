@@ -1,6 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { Profile, Vehicle, Zone } from "@/lib/types";
 import ChatBar from "@/components/chat-bar";
@@ -20,9 +22,11 @@ const CarScene = dynamic(() => import("@/components/car/car-scene"), {
 interface Props {
   profile: Profile;
   vehicle: Vehicle;
+  vehicles: Vehicle[];
 }
 
-export default function HomeClient({ profile, vehicle }: Props) {
+export default function HomeClient({ profile, vehicle, vehicles }: Props) {
+  const router = useRouter();
   const [zone, setZone] = useState<Zone | null>(null);
   const [vinCopied, setVinCopied] = useState(false);
 
@@ -67,11 +71,33 @@ export default function HomeClient({ profile, vehicle }: Props) {
             </div>
           )}
         </div>
-        <form action="/auth/sign-out" method="post">
-          <button className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white">
-            Sign out
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          {vehicles.length > 1 && (
+            <select
+              value={vehicle.id}
+              onChange={(e) => router.push(`/?v=${e.target.value}`)}
+              aria-label="Switch vehicle"
+              className="rounded-md border border-border bg-surface/60 px-2 py-1.5 text-xs"
+            >
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.year} {v.make} {v.model}
+                </option>
+              ))}
+            </select>
+          )}
+          <Link
+            href="/onboarding"
+            className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+          >
+            + Add vehicle
+          </Link>
+          <form action="/auth/sign-out" method="post">
+            <button className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white">
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       {/* 3D scene fills the viewport */}
