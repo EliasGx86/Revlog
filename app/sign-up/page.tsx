@@ -36,7 +36,7 @@ export default function SignUpPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Create your GarageIQ account</h1>
+        <h1 className="text-2xl font-semibold">Create your RevLog account</h1>
         <input
           className="w-full rounded-md border border-border bg-surface px-3 py-2"
           type="email"

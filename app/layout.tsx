@@ -3,7 +3,7 @@ import "./globals.css";
 import { PostHogProvider } from "@/components/posthog-provider";
 
 export const metadata: Metadata = {
-  title: "GarageIQ",
+  title: "RevLog",
   description: "Talk to your car. Log maintenance and ask questions naturally.",
 };
 

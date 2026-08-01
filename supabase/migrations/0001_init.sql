@@ -1,4 +1,4 @@
--- GarageIQ initial schema
+-- RevLog initial schema
 -- Run via: supabase db push  (after `supabase link`)
 -- Or paste into Supabase SQL editor.
 

@@ -61,7 +61,7 @@ export default function ZoneHistoryModal({ zone, vehicleId, onClose }: Props) {
           {logs === null && <p className="text-sm text-muted">Loading…</p>}
           {logs && logs.length === 0 && (
             <p className="text-sm text-muted">
-              No history yet. Tell GarageIQ when you service something — like
+              No history yet. Tell RevLog when you service something — like
               &quot;changed my oil today, full synthetic Mobil 1.&quot;
             </p>
           )}

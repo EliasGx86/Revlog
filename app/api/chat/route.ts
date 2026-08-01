@@ -98,7 +98,7 @@ Return ONLY JSON like {"intent":"log"}.`,
     messages: [
       {
         role: "system",
-        content: `You are GarageIQ, a friendly assistant for car maintenance. Keep responses to one or two sentences. Encourage the user to log services or ask questions about their car (a ${vehicle.year} ${vehicle.make} ${vehicle.model}).`,
+        content: `You are RevLog, a friendly assistant for car maintenance. Keep responses to one or two sentences. Encourage the user to log services or ask questions about their car (a ${vehicle.year} ${vehicle.make} ${vehicle.model}).`,
       },
       ...body.history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: body.message },
@@ -255,7 +255,7 @@ async function handleQuery(
     messages: [
       {
         role: "system",
-        content: `You are GarageIQ, the user's car maintenance assistant.
+        content: `You are RevLog, the user's car maintenance assistant.
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}, currently ${vehicle.current_mileage.toLocaleString()} mi.
 Today's date is ${new Date().toISOString().slice(0, 10)}.
 

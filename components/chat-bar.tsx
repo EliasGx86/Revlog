@@ -141,7 +141,7 @@ export default function ChatBar({ vehicleId }: Props) {
               className={`text-sm ${m.role === "user" ? "text-white" : "text-muted"}`}
             >
               <span className="mr-2 text-xs uppercase tracking-wide opacity-60">
-                {m.role === "user" ? "you" : "garageiq"}
+                {m.role === "user" ? "you" : "revlog"}
               </span>
               {m.content}
             </div>
