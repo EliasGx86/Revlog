@@ -66,7 +66,7 @@ export default function CarScene({ bodyType, color, onZoneClick }: Props) {
 
       {hoveredZone && (
         <div className="pointer-events-none absolute left-1/2 top-6 -translate-x-1/2 rounded-full bg-surface/90 px-4 py-1.5 text-sm capitalize backdrop-blur-sm">
-          {hoveredZone}
+          {bodyType === "motorcycle" && hoveredZone === "hood" ? "engine" : hoveredZone}
         </div>
       )}
     </div>

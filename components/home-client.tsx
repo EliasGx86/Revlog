@@ -24,6 +24,15 @@ interface Props {
 
 export default function HomeClient({ profile, vehicle }: Props) {
   const [zone, setZone] = useState<Zone | null>(null);
+  const [vinCopied, setVinCopied] = useState(false);
+
+  function copyVin() {
+    if (!vehicle.vin) return;
+    navigator.clipboard.writeText(vehicle.vin).then(() => {
+      setVinCopied(true);
+      setTimeout(() => setVinCopied(false), 1500);
+    });
+  }
 
   function handleZoneClick(z: Zone) {
     trackEvent("zone_clicked", { zone: z });
@@ -39,6 +48,24 @@ export default function HomeClient({ profile, vehicle }: Props) {
           <div className="text-xs text-muted">
             {vehicle.current_mileage.toLocaleString()} mi
           </div>
+          {(vehicle.license_plate || vehicle.vin) && (
+            <div className="mt-1.5 flex items-center gap-2">
+              {vehicle.license_plate && (
+                <span className="rounded border border-border bg-surface/70 px-1.5 py-0.5 font-mono text-[11px] tracking-widest">
+                  {vehicle.license_plate}
+                </span>
+              )}
+              {vehicle.vin && (
+                <button
+                  onClick={copyVin}
+                  title="Click to copy VIN"
+                  className="font-mono text-[11px] text-muted transition hover:text-white"
+                >
+                  VIN {vehicle.vin}{vinCopied ? " ✓ copied" : ""}
+                </button>
+              )}
+            </div>
+          )}
         </div>
         <form action="/auth/sign-out" method="post">
           <button className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white">

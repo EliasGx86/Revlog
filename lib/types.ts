@@ -1,4 +1,4 @@
-export type BodyType = "sedan" | "truck" | "suv";
+export type BodyType = "sedan" | "truck" | "suv" | "motorcycle";
 export type Zone = "hood" | "wheels" | "windshield" | "other";
 export type SubscriptionStatus =
   | "incomplete"
@@ -28,6 +28,8 @@ export interface Vehicle {
   year: number;
   color: string;
   body_type: BodyType;
+  vin: string | null;
+  license_plate: string | null;
   current_mileage: number;
   mileage_updated_at: string;
   created_at: string;
