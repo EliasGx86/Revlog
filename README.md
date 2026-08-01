@@ -1,5 +1,7 @@
 # RevLog
 
+**Live:** https://revlog-blush.vercel.app
+
 Talk to your car. Log maintenance and ask questions about your car's history — all through natural language. A 3D model of your actual vehicle (body type + color) sits at the center of the home screen, with clickable zones for hood, wheels, and windshield.
 
 **Stack:** Next.js (App Router) on Vercel · Supabase (Postgres + Auth) · Stripe (subscriptions) · OpenAI GPT-4o Mini · Three.js / React Three Fiber · PostHog · Tailwind.
