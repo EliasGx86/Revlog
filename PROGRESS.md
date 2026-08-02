@@ -89,6 +89,14 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 
 ## Session log
 
+- **2026-08-02k** — **Next 16 merged to production** (Elias verified the 3D
+  garage on the branch preview first). Stack now: next@16.2.12, React 19,
+  r3f v9, drei v10, three 0.185, ESLint 9 flat config. Remaining audit item:
+  sharp/libvips advisory inside Next's image optimizer (upstream). Also:
+  /admin hub page (was a 404) with live user/vehicle/chat/request counts
+  linking the two admin views; Dependabot's own Next-bump PR is superseded —
+  Elias closes it on GitHub.
+
 - **2026-08-02j** — Mobile feedback round 2 + initialization. Mobile: header
   buttons icon-only on phones (labels return at sm:), viewport-fit=cover +
   bigger safe-area padding so the chat bar clears mobile browser chrome, hint

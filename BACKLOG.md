@@ -34,13 +34,9 @@ Blocked on Elias creating the account (admin features key off his email).
   a curated interval table per make/model or an LLM pass with confidence
   gating.
 
-- **Next 16 migration — READY ON BRANCH `next16`** (2026-08-02): next@16.2.12,
-  React 19, r3f v9, drei v10, three 0.185, ESLint 9 flat config, async
-  cookies/searchParams. Build/typecheck/lint pass; audit down to 3 (sharp/
-  libvips inside Next's image optimizer, upstream fix pending). NOT merged:
-  the 3D scene needs a visual check on the Vercel preview URL first (the dev
-  browser pane's GPU wedged — see gotchas). Elias: open the next16 preview
-  deployment, spin all 4 vehicles, then say the word and we merge.
+- **Watch for a Next patch fixing the sharp/libvips advisory** — the only
+  remaining audit item after the Next 16 migration (merged to prod
+  2026-08-02 after Elias verified the preview). Bump Next when it lands.
 - **Mobile perf check** — MeshReflectorMaterial adds a render pass; gate behind a
   quality toggle if low-end phones struggle.
 - **Custom domain** — revlog.vercel.app is taken by someone else; current URL is
