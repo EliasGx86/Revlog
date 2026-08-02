@@ -95,7 +95,12 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   sharp/libvips advisory inside Next's image optimizer (upstream). Also:
   /admin hub page (was a 404) with live user/vehicle/chat/request counts
   linking the two admin views; Dependabot's own Next-bump PR is superseded —
-  Elias closes it on GitHub.
+  Elias closes it on GitHub. Follow-up from live testing: vehicles added
+  before initialization existed get backfilled (home silently pulls stock
+  specs when a vehicle has zero; ↻ button in the info modal as fallback),
+  init candidates gained oil filter part + drain plug size, and the query
+  prompt now must give its best specific value instead of deflecting to
+  "check your owner's manual".
 
 - **2026-08-02j** — Mobile feedback round 2 + initialization. Mobile: header
   buttons icon-only on phones (labels return at sm:), viewport-fit=cover +
