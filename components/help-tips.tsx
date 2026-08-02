@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 // Learnability layer: a lightbulb in the home header opens a "how to use
 // RevLog" sheet (works everywhere, and is the mobile answer to hover), while
@@ -88,7 +89,9 @@ export function HelpButton() {
         </button>
       </Tip>
 
-      {open && (
+      {/* Portal: this button lives inside the header (its own stacking
+          context), so without a portal the sheet renders BEHIND the chat. */}
+      {open && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
           onClick={() => setOpen(false)}
@@ -122,7 +125,8 @@ export function HelpButton() {
               Stuck? Ask the chat bar — “what can you do?” works too.
             </p>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

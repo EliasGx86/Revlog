@@ -57,6 +57,8 @@ export interface VehicleSpec {
   name: string;
   label: string;
   value: string;
+  /** 'oem' = stock value pulled at initialization; 'user' = stated/confirmed. */
+  source: "user" | "oem";
   created_at: string;
   updated_at: string;
 }

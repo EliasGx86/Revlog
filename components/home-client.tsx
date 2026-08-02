@@ -93,13 +93,14 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        {/* icon-only on phones (labels from sm: up) so nothing gets cut off */}
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {vehicles.length > 1 && (
             <select
               value={vehicle.id}
               onChange={(e) => router.push(`/?v=${e.target.value}`)}
               aria-label="Switch vehicle"
-              className="rounded-md border border-border bg-surface/60 px-2 py-1.5 text-xs"
+              className="max-w-[7rem] rounded-md border border-border bg-surface/60 px-2 py-1.5 text-xs sm:max-w-none"
             >
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
@@ -111,27 +112,30 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
           <Tip label="Documents: registration, insurance card, receipts">
             <button
               onClick={() => setShowGlovebox(true)}
-              className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+              aria-label="Glovebox"
+              className="rounded-md border border-border bg-surface/60 px-2.5 py-1.5 text-xs text-muted hover:text-white sm:px-3"
             >
-              🗂 Glovebox
+              🗂<span className="hidden sm:inline"> Glovebox</span>
             </button>
           </Tip>
           {vehicles.length > 1 ? (
             <Tip label="All your vehicles — open, edit, add, delete">
               <Link
                 href="/garage"
-                className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+                aria-label="Garage"
+                className="rounded-md border border-border bg-surface/60 px-2.5 py-1.5 text-xs text-muted hover:text-white sm:px-3"
               >
-                🏠 Garage
+                🏠<span className="hidden sm:inline"> Garage</span>
               </Link>
             </Tip>
           ) : (
             <Tip label="Put another vehicle in your garage">
               <Link
                 href="/onboarding"
-                className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+                aria-label="Add vehicle"
+                className="rounded-md border border-border bg-surface/60 px-2.5 py-1.5 text-xs text-muted hover:text-white sm:px-3"
               >
-                + Add vehicle
+                ＋<span className="hidden sm:inline"> Add vehicle</span>
               </Link>
             </Tip>
           )}
@@ -159,8 +163,8 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
         />
       </div>
 
-      {/* hint */}
-      <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 text-center text-xs text-muted">
+      {/* hint — lower on phones so it clears the (taller) wrapped header */}
+      <div className="pointer-events-none absolute left-1/2 top-32 w-full max-w-md -translate-x-1/2 px-6 text-center text-xs text-muted sm:top-20">
         {dueZones && dueZones.length > 0 ? (
           <span className="text-red-400">
             ● Service due — check the highlighted zone{dueZones.length > 1 ? "s" : ""}
@@ -170,8 +174,10 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
         )}
       </div>
 
-      {/* pinned chat bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+      {/* pinned chat bar — generous bottom padding: mobile browsers overlay
+          their own chrome at the bottom edge (safe-area covers standalone;
+          the extra rem covers floating URL bars) */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3">
         <ChatBar vehicleId={vehicle.id} currentMileage={vehicle.current_mileage} />
       </div>
 

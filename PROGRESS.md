@@ -89,6 +89,22 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 
 ## Session log
 
+- **2026-08-02j** — Mobile feedback round 2 + initialization. Mobile: header
+  buttons icon-only on phones (labels return at sm:), viewport-fit=cover +
+  bigger safe-area padding so the chat bar clears mobile browser chrome, hint
+  repositioned. Chat: ✕ clear button on the transcript; help sheet portals to
+  body (it rendered BEHIND the chat — the header's z-10 stacking context
+  capped its z-50). Vehicle info modal gained an ✏️ Edit link (→ /garage) so
+  VIN/plate can be added after creation. **Vehicle initialization**: on add,
+  an "Initializing your {year make model}" screen (rotating shop-talk lines)
+  while /api/vehicle/initialize pulls confident OEM specs (oil, filters, tire
+  size/pressure, battery, wipers…) into vehicle_specs as source='oem'
+  (migration 0009, applied) — shown with a "stock" badge; a new optional
+  "Customizations" field parses plain-language mods which override stock as
+  source='user'; chat statements also upgrade oem→user. Query prompt
+  distinguishes confirmed facts from stock specs. Best-effort with a 20s cap
+  — never blocks onboarding.
+
 - **2026-08-02i** — Elias's first real session surfaced the missing concept:
   vehicle FACTS vs maintenance EVENTS. Shipped **vehicle_specs** (migration
   0008, applied): new "spec" chat intent saves hardware facts (oil type,

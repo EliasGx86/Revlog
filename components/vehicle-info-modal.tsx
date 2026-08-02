@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Vehicle, VehicleInsurance, VehicleSpec } from "@/lib/types";
@@ -95,9 +96,17 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Vehicle info</h2>
-          <button onClick={onClose} className="text-muted hover:text-white">
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/garage"
+              className="rounded-md border border-border px-2.5 py-1 text-xs text-muted hover:text-white"
+            >
+              ✏️ Edit
+            </Link>
+            <button onClick={onClose} className="text-muted hover:text-white">
+              ✕
+            </button>
+          </div>
         </div>
 
         <dl className="mt-4 divide-y divide-border">
@@ -124,7 +133,17 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
           <dl className="mt-1 divide-y divide-border">
             {specs.map((s) => (
               <div key={s.name} className="flex items-center justify-between gap-4 py-2">
-                <dt className="text-sm text-muted">{s.label}</dt>
+                <dt className="flex items-center gap-1.5 text-sm text-muted">
+                  {s.label}
+                  {s.source === "oem" && (
+                    <span
+                      title="Factory spec, loaded automatically — correct it in chat if yours differs"
+                      className="rounded border border-border px-1 text-[9px] uppercase tracking-wide text-muted/80"
+                    >
+                      stock
+                    </span>
+                  )}
+                </dt>
                 <dd className="flex items-center gap-2 text-sm">
                   {s.value}
                   <button

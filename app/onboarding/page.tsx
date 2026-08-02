@@ -101,6 +101,37 @@ function ScanInput({
   );
 }
 
+// Shown while /api/vehicle/initialize pulls factory specs. Pure theater over
+// a single API call, but "initializing" beats a blank redirect.
+const INIT_LINES = [
+  "Pulling factory specs…",
+  "Checking fluids and filters…",
+  "Sizing up the tires…",
+  "Reading the build sheet…",
+  "Topping off the details…",
+];
+
+function InitializingScreen({ make, model, year }: { make: string; model: string; year: number }) {
+  const [line, setLine] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setLine((l) => (l + 1) % INIT_LINES.length), 2200);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-accent" />
+      <h1 className="mt-6 text-xl font-semibold">
+        Initializing your {year} {make} {model}
+      </h1>
+      <p className="mt-2 text-sm text-muted">{INIT_LINES[line]}</p>
+      <p className="mt-6 max-w-xs text-xs text-muted/70">
+        Loading stock specs — oil, filters, tire size — into your glovebox so
+        they&apos;re one question away.
+      </p>
+    </main>
+  );
+}
+
 const BODY_TYPES: { value: BodyType; label: string }[] = [
   { value: "sedan",      label: "Sedan" },
   { value: "truck",      label: "Truck" },
@@ -136,8 +167,10 @@ export default function OnboardingPage() {
   const [mileage, setMileage] = useState("");
   const [vin, setVin] = useState("");
   const [plate, setPlate] = useState("");
+  const [customizations, setCustomizations] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(false);
   // Returning users (adding another vehicle) get a way back; first-timers
   // have no garage to go back to yet.
   const [hasVehicles, setHasVehicles] = useState(false);
@@ -215,13 +248,40 @@ export default function OnboardingPage() {
         .eq("id", user.id);
       if (pErr) throw pErr;
 
+      // Initialization: pull OEM/stock specs (and parse any customizations)
+      // so the specs panel isn't empty on day one. Best-effort — a failure
+      // or slow model never blocks entry to the garage.
+      if (created?.id) {
+        setInitializing(true);
+        try {
+          await Promise.race([
+            fetch("/api/vehicle/initialize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                vehicleId: created.id,
+                customizations: customizations.trim() || undefined,
+              }),
+            }),
+            new Promise((resolve) => setTimeout(resolve, 20_000)),
+          ]);
+        } catch {
+          // proceed regardless
+        }
+      }
+
       // Land on the vehicle that was just added, not the first in the garage.
       router.push(created?.id ? `/?v=${created.id}` : "/");
       router.refresh();
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Something went wrong");
       setLoading(false);
+      setInitializing(false);
     }
+  }
+
+  if (initializing) {
+    return <InitializingScreen make={make} model={model} year={year} />;
   }
 
   return (
@@ -403,6 +463,24 @@ export default function OnboardingPage() {
               />
             ))}
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="customizations" className="text-sm text-muted">
+            Customizations (optional)
+          </label>
+          <textarea
+            id="customizations"
+            rows={2}
+            value={customizations}
+            onChange={(e) => setCustomizations(e.target.value)}
+            placeholder='Aftermarket stuff, plain language — e.g. "running 275/60R20s and a K&N filter"'
+            className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm placeholder:text-muted/70"
+          />
+          <p className="mt-1 text-xs text-muted">
+            We&apos;ll pull your vehicle&apos;s stock specs automatically — list
+            anything that&apos;s not stock and we&apos;ll use yours instead.
+          </p>
         </div>
 
         {err && <p className="text-sm text-red-400">{err}</p>}

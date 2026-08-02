@@ -145,9 +145,18 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* transcript (last few turns, ephemeral) */}
+      {/* transcript (last few turns, ephemeral — server keeps the real log) */}
       {messages.length > 0 && (
-        <div className="mb-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border bg-surface/80 p-3 backdrop-blur-md">
+        <div className="relative mb-3 rounded-xl border border-border bg-surface/80 backdrop-blur-md">
+          <button
+            onClick={() => setMessages([])}
+            aria-label="Clear conversation"
+            title="Clear conversation"
+            className="absolute right-2 top-2 z-10 rounded-full border border-border bg-bg/70 px-1.5 text-xs leading-5 text-muted hover:text-white"
+          >
+            ✕
+          </button>
+          <div className="max-h-48 space-y-2 overflow-y-auto p-3 pr-8">
           {messages.slice(-6).map((m, i) => (
             <div
               key={i}
@@ -159,6 +168,7 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
               {m.content}
             </div>
           ))}
+          </div>
         </div>
       )}
 

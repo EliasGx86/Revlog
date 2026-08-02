@@ -461,6 +461,7 @@ Invent a similar key if none fits. Empty array if there's no clear fact.`,
     name: s.name,
     label: s.label,
     value: s.value,
+    source: "user" as const, // a user statement upgrades an OEM guess
     updated_at: new Date().toISOString(),
   }));
   const { error } = await supabase
@@ -509,10 +510,11 @@ async function handleQuery(
     .eq("vehicle_id", vehicle.id)
     .maybeSingle();
 
-  // Saved specs (oil type, drain plug size…) — these answer with certainty.
+  // Saved specs (oil type, drain plug size…). source 'user' = confirmed by
+  // the owner; 'oem' = stock value pulled automatically at initialization.
   const { data: specs } = await supabase
     .from("vehicle_specs")
-    .select("label, value")
+    .select("label, value, source")
     .eq("vehicle_id", vehicle.id);
 
   const reply = await openai.chat.completions.create({
@@ -527,7 +529,7 @@ Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 Answer questions about their history using ONLY the data below — never invent dates, mileages, product details, or policy info; if it isn't there, say so plainly.
 
-Saved specs are the user's confirmed facts — answer from them with certainty, no hedging.
+Saved specs with source "user" are the owner's confirmed facts — answer from them with certainty, no hedging. Specs with source "oem" are stock values loaded automatically — answer from them but note they're the factory spec (e.g. "your stock spec is…"); the user can correct them anytime.
 
 For general questions NOT covered by saved data (what oil it takes, tire size, typical service timing), you MAY answer from general automotive knowledge — clearly framed as guidance, e.g. "A ${vehicle.year} ${vehicle.make} ${vehicle.model} typically takes 0W-20 full synthetic — check the oil cap or manual to confirm." Then add that they can reply "log it" to save it to their specs.
 
