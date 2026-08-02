@@ -22,7 +22,7 @@ const SERVICE_TYPES = Object.keys(SERVICE_CATALOG);
 // Fire-and-forget beta logging: every exchange lands in chat_messages so the
 // admin view can show what users actually ask. Never fails the request.
 async function logChat(
-  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string,
   vehicleId: string,
   message: string,
@@ -76,7 +76,7 @@ const LogSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -179,7 +179,7 @@ Return ONLY JSON like {"intent":"log"}.`,
 async function handleLog(
   message: string,
   vehicle: Vehicle,
-  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string
 ) {
   const openai = getOpenAI();
@@ -325,7 +325,7 @@ Return JSON with these fields (use null when unknown):
 async function handleInsurance(
   message: string,
   vehicle: Vehicle,
-  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   userId: string
 ) {
   const openai = getOpenAI();
@@ -404,7 +404,7 @@ Return JSON with these fields (null when not mentioned):
 async function handleSpec(
   message: string,
   vehicle: Vehicle,
-  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   history: { role: "user" | "assistant"; content: string }[],
   userId: string
 ) {
@@ -480,7 +480,7 @@ Invent a similar key if none fits. Empty array if there's no clear fact.`,
 async function handleQuery(
   message: string,
   vehicle: Vehicle,
-  supabase: ReturnType<typeof createSupabaseServerClient>,
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   history: { role: "user" | "assistant"; content: string }[],
   userId: string
 ) {

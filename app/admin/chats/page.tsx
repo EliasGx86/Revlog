@@ -28,7 +28,7 @@ const INTENT_STYLES: Record<string, string> = {
 export const dynamic = "force-dynamic";
 
 export default async function AdminChatsPage() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || !isAdminEmail(user.email)) notFound();
 
