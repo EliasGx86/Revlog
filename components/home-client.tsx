@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Profile, Vehicle, Zone } from "@/lib/types";
 import ChatBar from "@/components/chat-bar";
 import ZoneHistoryModal from "@/components/zone-history-modal";
@@ -51,6 +52,30 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
     trackEvent("zone_clicked", { zone: z });
     setZone(z);
   }
+
+  // Backfill: vehicles added before the initialization feature have no stock
+  // specs — pull them silently on first view (once per vehicle per session;
+  // the API's rate limit backstops this).
+  useEffect(() => {
+    const key = `revlog_init_${vehicle.id}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("vehicle_specs")
+      .select("id", { count: "exact", head: true })
+      .eq("vehicle_id", vehicle.id)
+      .then(({ count }) => {
+        if ((count ?? 0) > 0) return;
+        fetch("/api/vehicle/initialize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vehicleId: vehicle.id }),
+        }).catch(() => {
+          // best-effort; the info-modal button and chat remain as fallbacks
+        });
+      });
+  }, [vehicle.id]);
 
   return (
     // dvh (not vh): mobile keyboards/browser chrome shrink the visual

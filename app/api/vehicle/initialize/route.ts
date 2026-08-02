@@ -73,6 +73,8 @@ export async function POST(req: Request) {
 Candidate fields (snake_case name → label):
 oil_type → "Oil type" (e.g. "0W-20 full synthetic")
 oil_capacity → "Oil capacity" (e.g. "4.4 qt with filter")
+oil_filter_part → "Oil filter" (a common part number, e.g. "AC Delco PF63E")
+oil_drain_plug_size → "Oil drain plug" (socket size, e.g. "15mm")
 engine_air_filter_part → "Engine air filter"
 cabin_air_filter_part → "Cabin air filter"
 tire_size → "Tire size" (e.g. "215/55R17")

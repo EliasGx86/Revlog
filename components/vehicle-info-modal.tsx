@@ -23,6 +23,28 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const [insurance, setInsurance] = useState<VehicleInsurance | null>(null);
   const [specs, setSpecs] = useState<VehicleSpec[]>([]);
+  const [pulling, setPulling] = useState(false);
+
+  async function pullStockSpecs() {
+    setPulling(true);
+    try {
+      await fetch("/api/vehicle/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleId: vehicle.id }),
+      });
+      const supabase = createSupabaseBrowserClient();
+      const { data } = await supabase
+        .from("vehicle_specs")
+        .select("*")
+        .eq("vehicle_id", vehicle.id)
+        .order("label")
+        .returns<VehicleSpec[]>();
+      setSpecs(data ?? []);
+    } finally {
+      setPulling(false);
+    }
+  }
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -157,12 +179,20 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
             ))}
           </dl>
         ) : (
-          <p className="mt-1 text-xs text-muted">
-            Nothing on file — tell the chat bar facts like &quot;my oil is 0W-20
-            full synthetic&quot; or &quot;drain plug is 14mm&quot; and they&apos;ll
-            live here. Asking &quot;what oil do I use?&quot; then replying
-            &quot;log it&quot; works too.
-          </p>
+          <div className="mt-1">
+            <p className="text-xs text-muted">
+              Nothing on file — tell the chat bar facts like &quot;my oil is
+              0W-20 full synthetic&quot;, or pull your vehicle&apos;s factory
+              specs automatically:
+            </p>
+            <button
+              onClick={pullStockSpecs}
+              disabled={pulling}
+              className="mt-2 rounded-md border border-accent/60 px-3 py-1.5 text-xs text-accent transition hover:bg-accent/10 disabled:opacity-50"
+            >
+              {pulling ? "Pulling factory specs…" : "↻ Pull stock specs"}
+            </button>
+          </div>
         )}
 
         <h3 className="mt-5 text-sm font-semibold">Insurance</h3>
