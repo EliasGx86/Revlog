@@ -35,8 +35,9 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 - Mileage-based alerts are queued in the DB but nothing sends notifications yet (v2: Vercel Cron + Web Push/email).
 
 ### Suggested next session
-1. License plate text on the 3D model (BACKLOG P1).
-2. End-to-end flow test once Elias signs up (see Elias Todo.md #1).
+1. End-to-end flow test once Elias signs up (see Elias Todo.md #1) — now also
+   covers plates, reminders, and the help sheet.
+2. Multi-vehicle polish (BACKLOG P1).
 3. Next.js security bump.
 
 ### Admin
@@ -78,6 +79,22 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   hidden tab) — re-mounting (e.g. switching color) re-randomizes the pose.
 
 ## Session log
+
+- **2026-08-02f** — Four features: (1) **License plates** — the user's plate
+  text renders on the 3D models via canvas texture on a plane raycast-mounted
+  to the bumper (front+rear on cars) or rear fender (bike); empty field → no
+  plate ([components/car/license-plate.tsx](components/car/license-plate.tsx)).
+  (2) **Auth redesign** — shared AuthShell ("garage at night": animated
+  tachometer sweep, horizon glow, grain, Chakra Petch display font), both
+  pages rebuilt on it. (3) **Help system** — pulsing 💡 in the home header
+  opens a how-to sheet (works on mobile where hover doesn't exist); `<Tip>`
+  hover tooltips on header controls appear only on hover-capable devices via
+  `@media (hover:hover) and (pointer:fine)`. (4) **Reminders on every entry**
+  — [lib/reminders.ts](lib/reminders.ts): each service log or mileage answer
+  checks pending alerts against odometer/date and appends a 🔔 note to the
+  reply (due, or within 500 mi / 21 days); logging a service auto-completes
+  older pending alerts of the same type. Needs the end-to-end test (no real
+  account yet).
 
 - **2026-08-02e** — Harley GLB wired in as the motorcycle model
   (`components/car/glb-motorcycle-model.tsx`): license confirmed CC-BY 4.0 from

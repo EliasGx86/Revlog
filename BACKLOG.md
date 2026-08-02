@@ -17,13 +17,6 @@ Nobody has ever signed up. Auth → onboarding → 3D garage → chat log → mi
 prompt → zone history → Glovebox upload → /admin/chats, on desktop and phone.
 Blocked on Elias creating the account (admin features key off his email).
 
-### Real license plate on the 3D model
-Whatever the user typed in the plate field renders on the model's plate.
-Approach: draw the plate text to a canvas → `THREE.CanvasTexture` on a small
-plane overlaid on the model's rear plate position (the pack models have a white
-plate mesh to anchor to; fall back to the rear bbox face). Front plate too where
-the model has one. Empty plate field → leave the blank plate.
-
 ### Multi-vehicle polish
 - Onboarding copy should say "Add another vehicle" for existing users (and skip
   the beta pitch).
@@ -54,7 +47,14 @@ the model has one. Empty plate field → leave the blank plate.
 ## P3 — v2 ideas
 
 - Alerts → actual notifications (Vercel Cron + Web Push/Resend); monthly
-  mileage-update prompt.
+  mileage-update prompt. (In-chat reminder pass on every entry shipped
+  2026-08-02 — this item is the "reach the user when they're NOT in the app"
+  half.)
+- More trackables: fuel fill-ups → real MPG trend; insurance renewal reminder
+  (date is already stored); registration/emissions renewal dates; tire
+  tread/age (DOT date); battery age; wiper age; accident/incident notes with
+  photos; car-wash/detailing; parts warranty windows (e.g. "battery has 3-yr
+  warranty from 2026-08"); tolls/parking for cost tracking.
 - Receipt photo → OCR → autofill a maintenance log (vision route exists; add a
   "receipt" kind and link it to Glovebox uploads).
 - Glovebox: camera capture on mobile, multi-file upload, file preview inline.
