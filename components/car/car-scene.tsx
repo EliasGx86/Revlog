@@ -17,6 +17,8 @@ interface Props {
   bodyType: BodyType;
   color: string;
   licensePlate?: string | null;
+  /** Zones with an overdue service — highlighted red on the model. */
+  dueZones?: Zone[];
   onZoneClick: (zone: Zone) => void;
   /** Dev-only: lets the /dev/models page read canvas pixels for snapshots. */
   preserveBuffer?: boolean;
@@ -35,7 +37,7 @@ function DevSnapHook() {
   return null;
 }
 
-export default function CarScene({ bodyType, color, licensePlate, onZoneClick, preserveBuffer }: Props) {
+export default function CarScene({ bodyType, color, licensePlate, dueZones, onZoneClick, preserveBuffer }: Props) {
   const [hoveredZone, setHoveredZone] = useState<Zone | null>(null);
 
   return (
@@ -115,6 +117,7 @@ export default function CarScene({ bodyType, color, licensePlate, onZoneClick, p
             <GlbMotorcycleModel
               color={color}
               licensePlate={licensePlate}
+              dueZones={dueZones}
               onZoneClick={onZoneClick}
               hoveredZone={hoveredZone}
               setHoveredZone={setHoveredZone}
@@ -137,6 +140,7 @@ export default function CarScene({ bodyType, color, licensePlate, onZoneClick, p
               bodyType={bodyType}
               color={color}
               licensePlate={licensePlate}
+              dueZones={dueZones}
               onZoneClick={onZoneClick}
               hoveredZone={hoveredZone}
               setHoveredZone={setHoveredZone}

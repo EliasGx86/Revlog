@@ -58,6 +58,7 @@ export default function ModelDevPage() {
   const [bodyType, setBodyType] = useState<BodyType>("sedan");
   const [color, setColor] = useState("#cc2222");
   const [plate, setPlate] = useState("REV 402");
+  const [due, setDue] = useState(false);
 
   if (process.env.NODE_ENV === "production") notFound();
 
@@ -68,6 +69,7 @@ export default function ModelDevPage() {
           bodyType={bodyType}
           color={color}
           licensePlate={plate}
+          dueZones={due ? ["hood", "wheels"] : undefined}
           onZoneClick={() => {}}
           preserveBuffer
         />
@@ -103,6 +105,14 @@ export default function ModelDevPage() {
           placeholder="plate"
           className="w-20 rounded-md border border-border bg-transparent px-2 py-0.5 text-xs"
         />
+        <button
+          onClick={() => setDue((d) => !d)}
+          className={`rounded-full px-2.5 py-1 text-xs ${
+            due ? "bg-red-500/20 text-red-400" : "text-muted hover:text-white"
+          }`}
+        >
+          due
+        </button>
       </div>
     </div>
   );

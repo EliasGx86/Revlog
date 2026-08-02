@@ -36,6 +36,7 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [listening, setListening] = useState(false);
+  const [focused, setFocused] = useState(false);
   const [pendingMileagePrompt, setPendingMileagePrompt] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
@@ -161,6 +162,32 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
         </div>
       )}
 
+      {/* common requests, one tap instead of typing — shown while the empty
+          input is focused (mousedown fires before the input's blur) */}
+      {focused && !input && !pendingMileagePrompt && (
+        <div className="mb-2 flex flex-wrap justify-center gap-1.5">
+          {[
+            "Just changed my oil",
+            "Put on new tires today",
+            "When was my last oil change?",
+            "My insurance is …",
+            "What can I track?",
+          ].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setInput(s);
+              }}
+              className="rounded-full border border-border bg-surface/90 px-3 py-1 text-xs text-muted backdrop-blur-md transition hover:text-white"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       {pendingMileagePrompt ? (
         <MileagePrompt
           initial={currentMileage}
@@ -182,11 +209,16 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
           >
             {listening ? "●" : "🎙"}
           </button>
+          {/* min-w-0 lets the input shrink below its placeholder's intrinsic
+              width — without it the mic/send buttons get pushed off-screen
+              on narrow phones */}
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder='Try: "just changed my oil with Mobil 1 full synthetic"'
-            className="flex-1 bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Log a service or ask anything…"
+            className="min-w-0 flex-1 bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted"
             disabled={busy}
           />
           <button
@@ -219,25 +251,25 @@ function MileagePrompt({
         const n = parseInt(val, 10);
         if (Number.isFinite(n) && n >= 0) onSubmit(n);
       }}
-      className="flex items-center gap-2 rounded-full border border-accent/40 bg-surface/90 px-2 py-2 backdrop-blur-md"
+      className="flex items-center gap-1.5 rounded-full border border-accent/40 bg-surface/90 px-2 py-2 backdrop-blur-md"
     >
-      <span className="px-3 text-sm">Current mileage?</span>
+      <span className="shrink-0 pl-2.5 pr-1 text-sm">Mileage?</span>
       <input
         autoFocus
-        type="number"
-        min={0}
+        type="text"
+        inputMode="numeric"
         value={val}
-        onChange={(e) => setVal(e.target.value)}
+        onChange={(e) => setVal(e.target.value.replace(/[^0-9]/g, ""))}
         placeholder="e.g. 87432"
-        className="flex-1 bg-transparent px-2 py-1 text-sm outline-none placeholder:text-muted"
+        className="min-w-0 flex-1 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted"
       />
-      <button type="button" onClick={onSkip} className="px-3 text-sm text-muted">
+      <button type="button" onClick={onSkip} className="shrink-0 px-2 text-sm text-muted">
         Skip
       </button>
       <button
         type="submit"
         disabled={!val}
-        className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium disabled:opacity-50"
+        className="shrink-0 rounded-full bg-accent px-3.5 py-1.5 text-sm font-medium disabled:opacity-50"
       >
         Save
       </button>

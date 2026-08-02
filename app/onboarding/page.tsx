@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BodyType } from "@/lib/types";
 import { VEHICLE_CATALOG } from "@/lib/vehicle-catalog";
@@ -132,11 +133,22 @@ export default function OnboardingPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [color, setColor] = useState(COLORS[4].value); // Red
   const [bodyType, setBodyType] = useState<BodyType>("sedan");
-  const [mileage, setMileage] = useState<number>(0);
+  const [mileage, setMileage] = useState("");
   const [vin, setVin] = useState("");
   const [plate, setPlate] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Returning users (adding another vehicle) get a way back; first-timers
+  // have no garage to go back to yet.
+  const [hasVehicles, setHasVehicles] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("vehicles")
+      .select("id", { count: "exact", head: true })
+      .then(({ count }) => setHasVehicles((count ?? 0) > 0));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function onPick(e: React.ChangeEvent<HTMLSelectElement>) {
     const v = e.target.value;
@@ -186,7 +198,7 @@ export default function OnboardingPage() {
         year,
         color,
         body_type: bodyType,
-        current_mileage: mileage,
+        current_mileage: parseInt(mileage || "0", 10),
         vin: vin.trim().toUpperCase() || null,
         license_plate: plate.trim().toUpperCase() || null,
       });
@@ -209,7 +221,14 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-12">
-      <h1 className="text-2xl font-semibold">Set up your garage</h1>
+      {hasVehicles && (
+        <Link href="/" className="text-sm text-muted transition hover:text-white">
+          ← Back to garage
+        </Link>
+      )}
+      <h1 className={`text-2xl font-semibold ${hasVehicles ? "mt-3" : ""}`}>
+        {hasVehicles ? "Add another vehicle" : "Set up your garage"}
+      </h1>
       <p className="mt-1 text-sm text-muted">
         Tell us about your car or bike. We&apos;ll build a 3D model that matches.
       </p>
@@ -286,38 +305,34 @@ export default function OnboardingPage() {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="year" className="text-sm text-muted">Year</label>
-            <input
+            {/* real select — the number+datalist combo was painful on mobile */}
+            <select
               id="year"
-              type="number"
-              list="year-options"
-              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
-              placeholder="e.g. 2019"
               value={year}
-              min={1900}
-              max={2100}
-              onChange={(e) => setYear(parseInt(e.target.value || "0", 10))}
+              onChange={(e) => setYear(parseInt(e.target.value, 10))}
               required
-            />
-            {/* type to filter, or pick from the dropdown arrow */}
-            <datalist id="year-options">
+              className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2.5"
+            >
               {Array.from(
-                { length: 45 },
+                { length: 60 },
                 (_, i) => new Date().getFullYear() + 1 - i
               ).map((y) => (
-                <option key={y} value={y} />
+                <option key={y} value={y}>{y}</option>
               ))}
-            </datalist>
+            </select>
           </div>
           <div>
             <label htmlFor="mileage" className="text-sm text-muted">Current mileage</label>
+            {/* text+numeric keyboard: starts empty and every digit deletes,
+                unlike a number-typed controlled input that pins a 0 */}
             <input
               id="mileage"
-              type="number"
+              type="text"
+              inputMode="numeric"
               className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
               placeholder="e.g. 42000"
               value={mileage}
-              min={0}
-              onChange={(e) => setMileage(parseInt(e.target.value || "0", 10))}
+              onChange={(e) => setMileage(e.target.value.replace(/[^0-9]/g, ""))}
               required
             />
           </div>

@@ -72,6 +72,10 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   `headlight` (they share a texture atlas + identical props) — which would make
   the tires glow. Since our pipeline keys off material names, use the
   individual commands instead: `weld` → `simplify` → `quantize` → `prune`.
+- **Never `npm run build` while the dev server runs** — both write `.next/`;
+  the dev server's chunk state corrupts (MODULE_NOT_FOUND './787.js', phantom
+  "Unexpected token" syntax errors on valid files). Fix: stop dev server,
+  `rm -rf .next`, restart.
 - **Headless `__snap` renders have no ground contact**: the snapshot path is a
   bare `gl.render` without contact-shadow/reflection passes, so every vehicle
   looks like it's floating. Compare against a known-good model (sedan) before
@@ -79,6 +83,24 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   hidden tab) — re-mounting (e.g. switching color) re-randomizes the pose.
 
 ## Session log
+
+- **2026-08-02g** — Feedback sweep from Elias: year field is a real select
+  (datalist was unusable on mobile); number inputs no longer pin a sticky 0
+  (string state + numeric keyboard); mobile fixes (100dvh instead of vh so the
+  keyboard doesn't push Save/mic off-screen, min-w-0 on chat inputs,
+  safe-area padding); plate mount offset raised to 0.045 + polygonOffset (was
+  clipping behind the SUV's white bumper block); cabin air filter added to the
+  service catalog; zone modal shows "at N mi" with an ⓘ "what can I track
+  here" expander; chat gets tap-to-fill suggestion chips on focus, extraction
+  now normalizes brand typos ("le scab" → "Les Schwab") and flags
+  inconsistent messages in notes; smalltalk politely declines off-topic;
+  query intent may answer general vehicle questions ("what oil do I use?") as
+  guidance; account modal (👤 in header: email, member since, garage list,
+  sign out — moved out of the header); ← Back to garage links on admin +
+  onboarding (returning users get "Add another vehicle" copy); overdue
+  services light their zone red on the 3D model (pulsing hit-box + header
+  hint), driven by pending alerts vs odometer/date, with a "due" toggle in
+  /dev/models.
 
 - **2026-08-02f** — Four features: (1) **License plates** — the user's plate
   text renders on the 3D models via canvas texture on a plane raycast-mounted

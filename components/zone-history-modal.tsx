@@ -13,7 +13,7 @@ const ZONE_LABELS: Record<Zone, string> = {
 };
 
 const ZONE_SERVICES: Record<Zone, string[]> = {
-  hood: ["oil_change","coolant_flush","brake_fluid","transmission_fluid","air_filter","battery"],
+  hood: ["oil_change","coolant_flush","brake_fluid","transmission_fluid","air_filter","cabin_air_filter","battery"],
   wheels: ["brake_pads","tire_rotation","tires","rotors"],
   windshield: ["wiper_blades"],
   other: [],
@@ -35,6 +35,7 @@ interface Props {
 
 export default function ZoneHistoryModal({ zone, vehicleId, onClose }: Props) {
   const [logs, setLogs] = useState<MaintenanceLog[] | null>(null);
+  const [showTrackables, setShowTrackables] = useState(false);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -59,11 +60,46 @@ export default function ZoneHistoryModal({ zone, vehicleId, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{ZONE_LABELS[zone]}</h2>
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            {ZONE_LABELS[zone]}
+            {ZONE_SERVICES[zone].length > 0 && (
+              <button
+                onClick={() => setShowTrackables((s) => !s)}
+                aria-label="What can I track here?"
+                title="What can I track here?"
+                className={`rounded-full border px-1.5 text-xs leading-5 transition ${
+                  showTrackables
+                    ? "border-accent text-accent"
+                    : "border-border text-muted hover:text-white"
+                }`}
+              >
+                i
+              </button>
+            )}
+          </h2>
           <button onClick={onClose} className="text-muted hover:text-white">
             ✕
           </button>
         </div>
+
+        {showTrackables && (
+          <div className="mt-3 rounded-lg border border-border bg-bg/60 p-3">
+            <p className="text-xs text-muted">You can track here:</p>
+            <ul className="mt-1.5 flex flex-wrap gap-1.5">
+              {ZONE_SERVICES[zone].map((s) => (
+                <li
+                  key={s}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted"
+                >
+                  {SERVICE_CATALOG[s]?.label || s}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs italic text-white/70">
+              e.g. &quot;{ZONE_EXAMPLES[zone]}&quot;
+            </p>
+          </div>
+        )}
 
         <div className="mt-4">
           {logs === null && <p className="text-sm text-muted">Loading…</p>}
@@ -105,11 +141,18 @@ export default function ZoneHistoryModal({ zone, vehicleId, onClose }: Props) {
                       {new Date(log.service_date).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-muted">
-                    {log.mileage != null && <span>{log.mileage.toLocaleString()} mi · </span>}
-                    {log.product_brand && <span>{log.product_brand} </span>}
-                    {log.product_name && <span>{log.product_name}</span>}
-                  </div>
+                  {(log.product_brand || log.product_name || log.mileage != null) && (
+                    <div className="mt-1 text-xs text-muted">
+                      {log.product_brand && <span>{log.product_brand} </span>}
+                      {log.product_name && <span>{log.product_name}</span>}
+                      {log.mileage != null && (
+                        <span className="opacity-70">
+                          {(log.product_brand || log.product_name) && " · "}
+                          at {log.mileage.toLocaleString()} mi
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {log.notes && <div className="mt-1 text-xs text-muted">{log.notes}</div>}
                 </li>
               ))}

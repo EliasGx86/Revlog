@@ -75,6 +75,7 @@ export const SERVICE_CATALOG: Record<
   brake_fluid:       { zone: "hood",       label: "Brake fluid",        mileageInterval: 30000, monthInterval: 24 },
   transmission_fluid:{ zone: "hood",       label: "Transmission fluid", mileageInterval: 60000, monthInterval: 36 },
   air_filter:        { zone: "hood",       label: "Air filter",         mileageInterval: 20000, monthInterval: 24 },
+  cabin_air_filter:  { zone: "hood",       label: "Cabin air filter",   mileageInterval: 15000, monthInterval: 12 },
   battery:           { zone: "hood",       label: "Battery",            monthInterval: 48 },
   brake_pads:        { zone: "wheels",     label: "Brake pads",         mileageInterval: 40000 },
   tire_rotation:     { zone: "wheels",     label: "Tire rotation",      mileageInterval: 7500,  monthInterval: 6 },

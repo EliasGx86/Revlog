@@ -85,15 +85,23 @@ export function PlateMesh({ anchor, text, width }: PlateMeshProps) {
       ),
     [anchor]
   );
+  // Generous offset + polygon offset: some models have raised white details
+  // (blank plate blocks) right where we mount, which otherwise clip the plate.
   const position = useMemo(
-    () => anchor.position.clone().addScaledVector(anchor.normal, 0.015),
+    () => anchor.position.clone().addScaledVector(anchor.normal, 0.045),
     [anchor]
   );
 
   return (
     <mesh position={position} quaternion={quaternion}>
       <planeGeometry args={[width, width / 2]} />
-      <meshStandardMaterial map={texture} roughness={0.6} metalness={0.1} />
+      <meshStandardMaterial
+        map={texture}
+        roughness={0.6}
+        metalness={0.1}
+        polygonOffset
+        polygonOffsetFactor={-2}
+      />
     </mesh>
   );
 }

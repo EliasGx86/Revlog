@@ -135,7 +135,7 @@ Return ONLY JSON like {"intent":"log"}.`,
     messages: [
       {
         role: "system",
-        content: `You are RevLog, a friendly assistant for car maintenance. Keep responses to one or two sentences. Encourage the user to log services or ask questions about their car (a ${vehicle.year} ${vehicle.make} ${vehicle.model}).`,
+        content: `You are RevLog, a friendly assistant for car maintenance. Keep responses to one or two sentences. Encourage the user to log services or ask questions about their car (a ${vehicle.year} ${vehicle.make} ${vehicle.model}). If the message is unrelated to vehicles or maintenance, give ONE brief friendly sentence steering back to their car — never engage at length with off-topic requests.`,
       },
       ...body.history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: body.message },
@@ -172,6 +172,16 @@ Today's date is ${today}. Use this for "today", "just", "yesterday" etc.
 
 Allowed service_type values (pick the best match, never invent new ones):
 ${types}
+
+Clean up the input as you extract:
+- Correct obvious typos or voice-transcription mangling of brand/shop names to
+  the canonical spelling (e.g. "le scab"/"les shwab" → "Les Schwab",
+  "mobile one" → "Mobil 1", "penzoil" → "Pennzoil", "discount tires" →
+  "Discount Tire"). Only when confident — otherwise keep what they wrote.
+- If the message is inconsistent (a service attached to a part it doesn't
+  belong on, a mileage that reads like a typo), still pick the most sensible
+  service_type and add a short flag to notes, e.g. "assumed tires (message
+  said windshield)".
 
 Return JSON with these fields (use null when unknown):
 {
@@ -407,7 +417,11 @@ async function handleQuery(
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}, currently ${vehicle.current_mileage.toLocaleString()} mi.
 Today's date is ${new Date().toISOString().slice(0, 10)}.
 
-Answer the user's question using ONLY the data below. If the answer isn't there, say so plainly. Be brief — one to three sentences. Don't invent dates, mileages, product details, or policy info.
+Answer questions about their history using ONLY the data below — never invent dates, mileages, product details, or policy info; if it isn't there, say so plainly.
+
+For general questions about this specific vehicle (what oil it takes, tire size, when a service is typically due), you MAY answer from general automotive knowledge — clearly framed as guidance, e.g. "A ${vehicle.year} ${vehicle.make} ${vehicle.model} typically takes 0W-20 full synthetic — check the oil cap or manual to confirm." Suggest they log it once they've confirmed, so it's saved here.
+
+Be brief — one to three sentences.
 
 Maintenance history (most recent first):
 ${JSON.stringify(ctx, null, 2)}

@@ -9,6 +9,7 @@ import ChatBar from "@/components/chat-bar";
 import ZoneHistoryModal from "@/components/zone-history-modal";
 import VehicleInfoModal from "@/components/vehicle-info-modal";
 import GloveboxModal from "@/components/glovebox-modal";
+import AccountModal from "@/components/account-modal";
 import { HelpButton, Tip } from "@/components/help-tips";
 import { trackEvent } from "@/components/posthog-provider";
 
@@ -26,13 +27,16 @@ interface Props {
   profile: Profile;
   vehicle: Vehicle;
   vehicles: Vehicle[];
+  /** Zones with an overdue service — highlighted red on the model. */
+  dueZones?: Zone[];
 }
 
-export default function HomeClient({ profile, vehicle, vehicles }: Props) {
+export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Props) {
   const router = useRouter();
   const [zone, setZone] = useState<Zone | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showGlovebox, setShowGlovebox] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [vinCopied, setVinCopied] = useState(false);
 
   function copyVin() {
@@ -49,7 +53,9 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    // dvh (not vh): mobile keyboards/browser chrome shrink the visual
+    // viewport, and 100vh would push the chat bar's buttons off-screen.
+    <div className="relative h-[100dvh] w-screen overflow-hidden">
       {/* top bar */}
       <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 py-4">
         <div>
@@ -119,11 +125,15 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
             </Link>
           </Tip>
           <HelpButton />
-          <form action="/auth/sign-out" method="post">
-            <button className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white">
-              Sign out
+          <Tip label="Your account — email, plan, sign out">
+            <button
+              onClick={() => setShowAccount(true)}
+              aria-label="Your account"
+              className="rounded-md border border-border bg-surface/60 px-2.5 py-1.5 text-sm text-muted hover:text-white"
+            >
+              👤
             </button>
-          </form>
+          </Tip>
         </div>
       </header>
 
@@ -133,22 +143,36 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
           bodyType={vehicle.body_type}
           color={vehicle.color}
           licensePlate={vehicle.license_plate}
+          dueZones={dueZones}
           onZoneClick={handleZoneClick}
         />
       </div>
 
       {/* hint */}
       <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 text-center text-xs text-muted">
-        Drag to rotate · click a zone to see history · use the chat bar to log or ask
+        {dueZones && dueZones.length > 0 ? (
+          <span className="text-red-400">
+            ● Service due — check the highlighted zone{dueZones.length > 1 ? "s" : ""}
+          </span>
+        ) : (
+          "Drag to rotate · click a zone to see history · use the chat bar to log or ask"
+        )}
       </div>
 
       {/* pinned chat bar */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-5 pt-3">
+      <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
         <ChatBar vehicleId={vehicle.id} currentMileage={vehicle.current_mileage} />
       </div>
 
       {showInfo && (
         <VehicleInfoModal vehicle={vehicle} onClose={() => setShowInfo(false)} />
+      )}
+      {showAccount && (
+        <AccountModal
+          profile={profile}
+          vehicles={vehicles}
+          onClose={() => setShowAccount(false)}
+        />
       )}
 
       {showGlovebox && (

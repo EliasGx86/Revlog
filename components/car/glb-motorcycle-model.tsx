@@ -19,6 +19,8 @@ const TARGET_LENGTH = 2.6; // world units nose→tail
 interface Props {
   color: string;
   licensePlate?: string | null;
+  /** Zones with an overdue service — hit-boxes glow/pulse red. */
+  dueZones?: Zone[];
   onZoneClick?: (zone: Zone) => void;
   hoveredZone?: Zone | null;
   setHoveredZone?: (zone: Zone | null) => void;
@@ -150,11 +152,13 @@ function prepareMotorcycle(scene: THREE.Group, color: string): Prepared {
 export default function GlbMotorcycleModel({
   color,
   licensePlate,
+  dueZones,
   onZoneClick,
   hoveredZone,
   setHoveredZone,
 }: Props) {
   const root = useRef<THREE.Group>(null);
+  const hitboxMats = useRef(new Map<string, { mat: THREE.MeshBasicMaterial; zone: Zone }>());
   const { scene } = useGLTF(MODEL_URL);
 
   const { object, size, wheelAnchors, plateAnchor } = useMemo(
@@ -162,9 +166,15 @@ export default function GlbMotorcycleModel({
     [scene, color]
   );
 
-  useFrame((_, dt) => {
+  useFrame(({ clock }, dt) => {
     if (root.current && !hoveredZone) {
       root.current.rotation.y += dt * 0.15;
+    }
+    // Hit-box opacity every frame: hover glow wins, due zones pulse red.
+    const pulse = 0.11 + 0.07 * Math.sin(clock.elapsedTime * 2.5);
+    for (const { mat, zone } of hitboxMats.current.values()) {
+      const due = dueZones?.includes(zone);
+      mat.opacity = hoveredZone === zone ? 0.25 : due ? pulse : 0;
     }
   });
 
@@ -184,11 +194,15 @@ export default function GlbMotorcycleModel({
     },
   });
 
-  const hitboxMaterial = (zone: Zone) => (
+  const hitboxMaterial = (zone: Zone, key = zone as string) => (
     <meshBasicMaterial
-      color="#ff5722"
+      ref={(m: THREE.MeshBasicMaterial | null) => {
+        if (m) hitboxMats.current.set(key, { mat: m, zone });
+        else hitboxMats.current.delete(key);
+      }}
+      color={dueZones?.includes(zone) ? "#e11d48" : "#ff5722"}
       transparent
-      opacity={hoveredZone === zone ? 0.22 : 0}
+      opacity={hoveredZone === zone ? 0.22 : dueZones?.includes(zone) ? 0.14 : 0}
       depthWrite={false}
     />
   );
@@ -216,7 +230,7 @@ export default function GlbMotorcycleModel({
       {wheelAnchors.map((w, i) => (
         <mesh key={i} position={w.position} {...zoneHandlers("wheels")}>
           <sphereGeometry args={[w.radius * 1.2, 12, 12]} />
-          {hitboxMaterial("wheels")}
+          {hitboxMaterial("wheels", `wheels-${i}`)}
         </mesh>
       ))}
     </group>

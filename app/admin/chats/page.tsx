@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAdminEmail } from "@/lib/admin";
@@ -40,7 +41,10 @@ export default async function AdminChatsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Chat log</h1>
+      <Link href="/" className="text-sm text-muted transition hover:text-white">
+        ← Back to garage
+      </Link>
+      <h1 className="mt-3 text-2xl font-semibold">Chat log</h1>
       <p className="mt-1 text-sm text-muted">
         Last {rows?.length ?? 0} exchanges across all users, newest first.
         You&apos;re seeing this because you&apos;re signed in as an admin.

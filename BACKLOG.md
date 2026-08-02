@@ -18,12 +18,25 @@ prompt → zone history → Glovebox upload → /admin/chats, on desktop and pho
 Blocked on Elias creating the account (admin features key off his email).
 
 ### Multi-vehicle polish
-- Onboarding copy should say "Add another vehicle" for existing users (and skip
-  the beta pitch).
+- ~~Onboarding copy should say "Add another vehicle" for existing users~~ —
+  done 2026-08-02 (title swaps + back link for returning users).
 - After adding a vehicle, land on it (currently lands on the first).
 - Garage grid view once users have 3+; edit/delete a vehicle.
 
 ## P2 — before public launch
+
+- **Recommendations from vehicle data** — we know year/make/model/mileage;
+  suggest likely-due services and correct parts/fluids. First step shipped
+  2026-08-02: the query intent now answers general questions ("what oil does
+  my car use?") from model knowledge, framed as guidance, and nudges the user
+  to log the confirmed answer. Next: proactive suggestions (e.g. on mileage
+  update, "vehicles like yours usually need a coolant flush by 60k") — maybe
+  a curated interval table per make/model or an LLM pass with confidence
+  gating.
+- **Road trip mode + fuel fill-ups** — log fill-ups (gallons, price,
+  odometer) via chat → real MPG trend; "road trip" button groups fill-ups,
+  distance, and costs per trip. Elias has more ideas coming — don't build
+  until specced.
 
 - **Next.js security bump** — 14.2.15 has a known vuln; Dependabot: 65 alerts
   (1 critical). Bump Next + audit transitive deps.

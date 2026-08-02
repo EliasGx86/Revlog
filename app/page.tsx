@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home-client";
-import type { Vehicle, Profile } from "@/lib/types";
+import { SERVICE_CATALOG, type Vehicle, type Profile, type Zone } from "@/lib/types";
 
 export default async function HomePage({
   searchParams,
@@ -35,5 +35,35 @@ export default async function HomePage({
   // BETA: free for everyone — no subscription gate. When Stripe launches,
   // restore the check on profile.subscription_status here.
 
-  return <HomeClient profile={profile} vehicle={vehicle} vehicles={vehicles} />;
+  // Zones with an overdue service light up red on the 3D model.
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: pendingAlerts } = await supabase
+    .from("alerts")
+    .select("service_type, due_date, due_mileage")
+    .eq("vehicle_id", vehicle.id)
+    .eq("status", "pending");
+  const dueZones = [
+    ...new Set(
+      (pendingAlerts ?? [])
+        .filter(
+          (a) =>
+            (a.due_mileage != null && vehicle.current_mileage >= a.due_mileage) ||
+            (a.due_date != null && a.due_date <= today)
+        )
+        .map(
+          (a): Zone =>
+            SERVICE_CATALOG[a.service_type as keyof typeof SERVICE_CATALOG]?.zone ?? "other"
+        )
+        .filter((z) => z !== "other")
+    ),
+  ];
+
+  return (
+    <HomeClient
+      profile={profile}
+      vehicle={vehicle}
+      vehicles={vehicles}
+      dueZones={dueZones}
+    />
+  );
 }
