@@ -20,3 +20,67 @@ body {
 button {
   cursor: pointer;
 }
+
+/* --- auth screens ("the garage at night") --- */
+
+/* needle: rest at 0 rpm (-225° tick ≙ 0 rotation offset), sweep to redline
+   and settle at a low idle. Angles are relative to the needle's drawn
+   position pointing straight up (which sits at the 4 mark, +135° from 0). */
+@keyframes auth-needle-sweep {
+  0%   { transform: rotate(-135deg); }
+  45%  { transform: rotate(128deg); }
+  70%  { transform: rotate(-98deg); }
+  85%  { transform: rotate(-112deg); }
+  100% { transform: rotate(-107deg); }
+}
+.auth-needle {
+  animation: auth-needle-sweep 2.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes auth-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.auth-rise {
+  animation: auth-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-grain {
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.03 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-needle, .auth-rise {
+    animation: none;
+  }
+}
+
+/* --- help tips --- */
+
+/* Tooltips only on devices that can actually hover (desktop). Touch users
+   get the same info from the lightbulb sheet instead. */
+.tip-bubble {
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tip-parent:hover .tip-bubble,
+  .tip-parent:focus-within .tip-bubble {
+    display: block;
+  }
+}
+
+/* Draw the eye to the lightbulb until it's been opened once. */
+@keyframes help-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 87, 34, 0); }
+  50%      { box-shadow: 0 0 12px 2px rgba(255, 87, 34, 0.45); }
+}
+.help-pulse {
+  animation: help-pulse 2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .help-pulse {
+    animation: none;
+    box-shadow: 0 0 8px 1px rgba(255, 87, 34, 0.35);
+  }
+}

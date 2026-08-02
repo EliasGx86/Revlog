@@ -9,6 +9,7 @@ import ChatBar from "@/components/chat-bar";
 import ZoneHistoryModal from "@/components/zone-history-modal";
 import VehicleInfoModal from "@/components/vehicle-info-modal";
 import GloveboxModal from "@/components/glovebox-modal";
+import { HelpButton, Tip } from "@/components/help-tips";
 import { trackEvent } from "@/components/posthog-provider";
 
 // Three.js is heavy and DOM-dependent — load only on the client.
@@ -52,6 +53,7 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
       {/* top bar */}
       <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 py-4">
         <div>
+          <Tip label="Vehicle info — VIN, plate, mileage, insurance">
           <button
             onClick={() => setShowInfo(true)}
             className="-mx-2 -my-1 rounded-md px-2 py-1 text-left transition hover:bg-surface/60"
@@ -65,6 +67,7 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
               {vehicle.current_mileage.toLocaleString()} mi
             </div>
           </button>
+          </Tip>
           {(vehicle.license_plate || vehicle.vin) && (
             <div className="mt-1.5 flex items-center gap-2">
               {vehicle.license_plate && (
@@ -99,18 +102,23 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
               ))}
             </select>
           )}
-          <button
-            onClick={() => setShowGlovebox(true)}
-            className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
-          >
-            🗂 Glovebox
-          </button>
-          <Link
-            href="/onboarding"
-            className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
-          >
-            + Add vehicle
-          </Link>
+          <Tip label="Documents: registration, insurance card, receipts">
+            <button
+              onClick={() => setShowGlovebox(true)}
+              className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+            >
+              🗂 Glovebox
+            </button>
+          </Tip>
+          <Tip label="Put another vehicle in your garage">
+            <Link
+              href="/onboarding"
+              className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+            >
+              + Add vehicle
+            </Link>
+          </Tip>
+          <HelpButton />
           <form action="/auth/sign-out" method="post">
             <button className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white">
               Sign out

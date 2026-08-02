@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import AuthShell, { AuthField, AuthSwitchLink } from "@/components/auth/auth-shell";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -34,41 +34,41 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Create your RevLog account</h1>
-        <input
-          className="w-full rounded-md border border-border bg-surface px-3 py-2"
+    <AuthShell>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <h2 className="text-lg font-semibold">Pull into the garage</h2>
+        <AuthField
+          label="Email"
           type="email"
-          placeholder="email@example.com"
+          placeholder="you@example.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
           required
         />
-        <input
-          className="w-full rounded-md border border-border bg-surface px-3 py-2"
+        <AuthField
+          label="Password"
           type="password"
-          placeholder="password (min 8 chars)"
+          placeholder="min 8 characters"
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
           required
         />
         {err && <p className="text-sm text-red-400">{err}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-accent px-3 py-2 font-medium disabled:opacity-50"
+          className="w-full rounded-md bg-accent px-3 py-2.5 text-sm font-semibold tracking-wide transition-shadow hover:shadow-[0_0_24px_rgba(255,87,34,0.35)] disabled:opacity-50"
         >
-          {loading ? "Creating…" : "Create account"}
+          {loading ? "Firing up…" : "Create account"}
         </button>
-        <p className="text-sm text-muted">
-          Already have an account?{" "}
-          <Link href="/sign-in" className="text-white underline">
-            Sign in
-          </Link>
+        <p className="text-center text-[11px] leading-relaxed text-muted">
+          Free while in beta — no card needed.
         </p>
+        <AuthSwitchLink prompt="Already have an account?" href="/sign-in" cta="Sign in" />
       </form>
-    </main>
+    </AuthShell>
   );
 }
