@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { Profile, Vehicle } from "@/lib/types";
 
 // The user's own info at a glance: account, membership, garage summary.
@@ -74,6 +75,12 @@ export default function AccountModal({ profile, vehicles, onClose }: Props) {
             ))}
           </ul>
         )}
+        <Link
+          href="/garage"
+          className="mt-2 inline-block text-xs text-muted underline decoration-border underline-offset-4 hover:text-white"
+        >
+          Manage garage →
+        </Link>
 
         <form action="/auth/sign-out" method="post" className="mt-5">
           <button className="w-full rounded-md border border-border px-3 py-2 text-sm text-muted transition hover:border-red-400/50 hover:text-red-400">

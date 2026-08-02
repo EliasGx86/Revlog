@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { buildReminderNote } from "@/lib/reminders";
+import { buildReminderNote, buildSuggestionNote } from "@/lib/reminders";
 
 const Schema = z.object({
   logId: z.string().uuid(),
@@ -44,9 +44,16 @@ export async function POST(req: Request) {
       .eq("user_id", user.id);
   }
 
-  // A fresh odometer reading is the best moment to check what's now due.
+  // A fresh odometer reading is the best moment to check what's now due —
+  // and to nudge about services we've never seen logged at all.
   const effectiveMileage = Math.max(body.mileage, vehicle?.current_mileage ?? 0);
-  const reminder = await buildReminderNote(supabase, body.vehicleId, effectiveMileage);
+  const [reminder, suggestion] = await Promise.all([
+    buildReminderNote(supabase, body.vehicleId, effectiveMileage),
+    buildSuggestionNote(supabase, body.vehicleId, effectiveMileage),
+  ]);
 
-  return NextResponse.json({ ok: true, reminder });
+  return NextResponse.json({
+    ok: true,
+    reminder: [reminder, suggestion].filter(Boolean).join(" ") || null,
+  });
 }

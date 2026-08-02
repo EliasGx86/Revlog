@@ -107,3 +107,55 @@ export async function buildReminderNote(
   if (!parts.length) return null;
   return `🔔 ${parts.join(". ")}.`;
 }
+
+/**
+ * Proactive suggestions for a FRESH odometer reading: services we've never
+ * seen logged whose typical interval has already passed. Distinct from
+ * buildReminderNote, which only re-surfaces alerts the app itself scheduled —
+ * this one catches maintenance the user has never told us about at all.
+ * Kept to the 2 most-overdue so it reads as a nudge, not a lecture.
+ */
+export async function buildSuggestionNote(
+  supabase: SupabaseClient,
+  vehicleId: string,
+  currentMileage: number
+): Promise<string | null> {
+  if (currentMileage <= 0) return null;
+
+  const [{ data: logs }, { data: alerts }] = await Promise.all([
+    supabase.from("maintenance_logs").select("service_type").eq("vehicle_id", vehicleId),
+    supabase
+      .from("alerts")
+      .select("service_type")
+      .eq("vehicle_id", vehicleId)
+      .eq("status", "pending"),
+  ]);
+  const known = new Set([
+    ...(logs ?? []).map((l) => l.service_type as string),
+    ...(alerts ?? []).map((a) => a.service_type as string),
+  ]);
+
+  const candidates = Object.entries(SERVICE_CATALOG)
+    .filter(
+      ([type, cat]) =>
+        cat.mileageInterval != null &&
+        !known.has(type) &&
+        currentMileage >= cat.mileageInterval
+    )
+    // most-overdue first, by how many intervals have elapsed
+    .sort(
+      ([, a], [, b]) =>
+        currentMileage / b.mileageInterval! - currentMileage / a.mileageInterval!
+    )
+    .slice(0, 2);
+
+  if (!candidates.length) return null;
+
+  const list = candidates
+    .map(
+      ([, cat]) =>
+        `${cat.label} (typical every ${cat.mileageInterval!.toLocaleString()} mi)`
+    )
+    .join(", ");
+  return `💡 Nothing on record yet for: ${list}. If you've had these done, just tell me and I'll log them.`;
+}

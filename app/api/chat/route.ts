@@ -43,7 +43,17 @@ async function logChat(
 }
 
 const RouterSchema = z.object({
-  intent: z.enum(["log", "query", "insurance", "smalltalk"]),
+  intent: z.enum(["log", "query", "insurance", "spec", "smalltalk"]),
+});
+
+const SpecSchema = z.object({
+  specs: z.array(
+    z.object({
+      name: z.string().regex(/^[a-z0-9_]+$/),
+      label: z.string(),
+      value: z.string(),
+    })
+  ),
 });
 
 const InsuranceSchema = z.object({
@@ -112,12 +122,14 @@ export async function POST(req: Request) {
         role: "system",
         content: `You classify a user's message about their car as one of:
 - "log": they're telling us they performed a maintenance service (past or completed action). Examples: "changed my oil yesterday", "just put new tires on", "got the brakes done at 50k".
-- "query": they're asking a question about their maintenance history, insurance, or vehicle. Examples: "when did I last change my oil?", "what brand of oil did I use?", "what's my policy number?", "how much is my insurance?".
+- "query": they're asking a question about their maintenance history, insurance, or vehicle. Examples: "when did I last change my oil?", "what brand of oil did I use?", "what's my policy number?", "what oil does my car take?".
 - "insurance": they're SHARING insurance details to store. Examples: "my insurance is Progressive, policy ABC-123", "I pay $142 a month with Geico", "insurance renews March 15th".
+- "spec": they're SHARING a fact about the vehicle's hardware or specs (not an action they performed), or asking to save a fact from the conversation. Examples: "I use 0W-20 oil", "my drain plug is 14mm", "tire size is 265/65R17", "log it" / "save that" right after a spec was discussed.
 - "smalltalk": anything else.
 
 Return ONLY JSON like {"intent":"log"}.`,
       },
+      ...body.history.slice(-2).map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: body.message },
     ],
   });
@@ -138,6 +150,9 @@ Return ONLY JSON like {"intent":"log"}.`,
   }
   if (intent === "insurance") {
     return await handleInsurance(body.message, vehicle, supabase, user.id);
+  }
+  if (intent === "spec") {
+    return await handleSpec(body.message, vehicle, supabase, body.history, user.id);
   }
 
   // smalltalk fallback
@@ -386,6 +401,81 @@ Return JSON with these fields (null when not mentioned):
   return NextResponse.json({ intent: "insurance", reply });
 }
 
+async function handleSpec(
+  message: string,
+  vehicle: Vehicle,
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  history: { role: "user" | "assistant"; content: string }[],
+  userId: string
+) {
+  const openai = getOpenAI();
+
+  // History matters here: "log it" refers to a fact from the previous
+  // exchange (often the assistant's own guidance answer).
+  const extraction = await openai.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: 0,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `The user is stating (or confirming) facts about their ${vehicle.year} ${vehicle.make} ${vehicle.model}'s hardware/specs. Extract them so they can be saved.
+
+If the message is a confirmation like "log it" / "save that", pull the fact from the recent conversation (usually the assistant's last answer). Prefer the USER's stated value when it differs from the assistant's guidance.
+
+Return JSON:
+{
+  "specs": [
+    { "name": "snake_case_key", "label": "Display label", "value": "the fact" }
+  ]
+}
+
+Use stable, canonical keys so repeats overwrite instead of duplicating:
+oil_type, oil_capacity, oil_filter, oil_drain_plug_size, tire_size,
+tire_pressure, battery_group, wiper_size_driver, wiper_size_passenger,
+cabin_air_filter_part, engine_air_filter_part, coolant_type, fuel_type…
+Invent a similar key if none fits. Empty array if there's no clear fact.`,
+      },
+      ...history.slice(-4).map((h) => ({ role: h.role, content: h.content })),
+      { role: "user", content: message },
+    ],
+  });
+
+  let extracted: z.infer<typeof SpecSchema>;
+  try {
+    extracted = SpecSchema.parse(JSON.parse(extraction.choices[0].message.content || "{}"));
+  } catch {
+    extracted = { specs: [] };
+  }
+
+  if (!extracted.specs.length) {
+    const reply =
+      "I couldn't pin down a spec to save — try something like \"my oil is 0W-20 full synthetic\" or \"drain plug is 14mm\".";
+    await logChat(supabase, userId, vehicle.id, message, "spec", reply);
+    return NextResponse.json({ intent: "spec", reply });
+  }
+
+  const rows = extracted.specs.map((s) => ({
+    vehicle_id: vehicle.id,
+    user_id: userId,
+    name: s.name,
+    label: s.label,
+    value: s.value,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await supabase
+    .from("vehicle_specs")
+    .upsert(rows, { onConflict: "vehicle_id,name" });
+  if (error) {
+    return NextResponse.json({ error: "Failed to save spec" }, { status: 500 });
+  }
+
+  const summary = extracted.specs.map((s) => `${s.label}: ${s.value}`).join(" · ");
+  const reply = `Saved to your ${vehicle.make}'s specs — ${summary}. Ask me anytime.`;
+  await logChat(supabase, userId, vehicle.id, message, "spec", reply);
+  return NextResponse.json({ intent: "spec", reply });
+}
+
 async function handleQuery(
   message: string,
   vehicle: Vehicle,
@@ -419,6 +509,12 @@ async function handleQuery(
     .eq("vehicle_id", vehicle.id)
     .maybeSingle();
 
+  // Saved specs (oil type, drain plug size…) — these answer with certainty.
+  const { data: specs } = await supabase
+    .from("vehicle_specs")
+    .select("label, value")
+    .eq("vehicle_id", vehicle.id);
+
   const reply = await openai.chat.completions.create({
     model: CHAT_MODEL,
     temperature: 0.2,
@@ -431,9 +527,14 @@ Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 Answer questions about their history using ONLY the data below — never invent dates, mileages, product details, or policy info; if it isn't there, say so plainly.
 
-For general questions about this specific vehicle (what oil it takes, tire size, when a service is typically due), you MAY answer from general automotive knowledge — clearly framed as guidance, e.g. "A ${vehicle.year} ${vehicle.make} ${vehicle.model} typically takes 0W-20 full synthetic — check the oil cap or manual to confirm." Suggest they log it once they've confirmed, so it's saved here.
+Saved specs are the user's confirmed facts — answer from them with certainty, no hedging.
+
+For general questions NOT covered by saved data (what oil it takes, tire size, typical service timing), you MAY answer from general automotive knowledge — clearly framed as guidance, e.g. "A ${vehicle.year} ${vehicle.make} ${vehicle.model} typically takes 0W-20 full synthetic — check the oil cap or manual to confirm." Then add that they can reply "log it" to save it to their specs.
 
 Be brief — one to three sentences.
+
+Saved specs (confirmed facts about this vehicle):
+${JSON.stringify(specs?.length ? specs : "none")}
 
 Maintenance history (most recent first):
 ${JSON.stringify(ctx, null, 2)}

@@ -20,6 +20,8 @@ interface ChatRow {
 const INTENT_STYLES: Record<string, string> = {
   log: "bg-emerald-500/15 text-emerald-400",
   query: "bg-sky-500/15 text-sky-400",
+  insurance: "bg-violet-500/15 text-violet-400",
+  spec: "bg-amber-500/15 text-amber-400",
   smalltalk: "bg-zinc-500/15 text-zinc-400",
 };
 

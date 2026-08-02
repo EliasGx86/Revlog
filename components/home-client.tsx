@@ -116,14 +116,25 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
               🗂 Glovebox
             </button>
           </Tip>
-          <Tip label="Put another vehicle in your garage">
-            <Link
-              href="/onboarding"
-              className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
-            >
-              + Add vehicle
-            </Link>
-          </Tip>
+          {vehicles.length > 1 ? (
+            <Tip label="All your vehicles — open, edit, add, delete">
+              <Link
+                href="/garage"
+                className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+              >
+                🏠 Garage
+              </Link>
+            </Tip>
+          ) : (
+            <Tip label="Put another vehicle in your garage">
+              <Link
+                href="/onboarding"
+                className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+              >
+                + Add vehicle
+              </Link>
+            </Tip>
+          )}
           <HelpButton />
           <Tip label="Your account — email, plan, sign out">
             <button

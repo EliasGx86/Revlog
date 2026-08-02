@@ -48,6 +48,19 @@ export interface VehicleInsurance {
   updated_at: string;
 }
 
+// Hardware facts about the vehicle (oil type, drain plug size…) — saved from
+// chat, unlike maintenance_logs which record events.
+export interface VehicleSpec {
+  id: string;
+  vehicle_id: string;
+  user_id: string;
+  name: string;
+  label: string;
+  value: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MaintenanceLog {
   id: string;
   vehicle_id: string;

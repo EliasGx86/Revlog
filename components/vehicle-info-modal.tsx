@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import type { Vehicle, VehicleInsurance } from "@/lib/types";
+import type { Vehicle, VehicleInsurance, VehicleSpec } from "@/lib/types";
 
 // At-a-glance text info for the selected vehicle. Opened from the home header.
 
@@ -21,6 +21,7 @@ const BODY_LABELS: Record<Vehicle["body_type"], string> = {
 export default function VehicleInfoModal({ vehicle, onClose }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
   const [insurance, setInsurance] = useState<VehicleInsurance | null>(null);
+  const [specs, setSpecs] = useState<VehicleSpec[]>([]);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
@@ -30,6 +31,13 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
       .eq("vehicle_id", vehicle.id)
       .maybeSingle<VehicleInsurance>()
       .then(({ data }) => setInsurance(data ?? null));
+    supabase
+      .from("vehicle_specs")
+      .select("*")
+      .eq("vehicle_id", vehicle.id)
+      .order("label")
+      .returns<VehicleSpec[]>()
+      .then(({ data }) => setSpecs(data ?? []));
   }, [vehicle.id]);
 
   async function copy(label: string, value: string) {
@@ -110,6 +118,33 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
             </div>
           ))}
         </dl>
+
+        <h3 className="mt-5 text-sm font-semibold">Specs</h3>
+        {specs.length ? (
+          <dl className="mt-1 divide-y divide-border">
+            {specs.map((s) => (
+              <div key={s.name} className="flex items-center justify-between gap-4 py-2">
+                <dt className="text-sm text-muted">{s.label}</dt>
+                <dd className="flex items-center gap-2 text-sm">
+                  {s.value}
+                  <button
+                    onClick={() => copy(s.label, s.value)}
+                    className="rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:text-white"
+                  >
+                    {copied === s.label ? "Copied ✓" : "Copy"}
+                  </button>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <p className="mt-1 text-xs text-muted">
+            Nothing on file — tell the chat bar facts like &quot;my oil is 0W-20
+            full synthetic&quot; or &quot;drain plug is 14mm&quot; and they&apos;ll
+            live here. Asking &quot;what oil do I use?&quot; then replying
+            &quot;log it&quot; works too.
+          </p>
+        )}
 
         <h3 className="mt-5 text-sm font-semibold">Insurance</h3>
         {insurance ? (
