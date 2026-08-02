@@ -9,30 +9,22 @@ in [PROGRESS.md](PROGRESS.md); things only Elias can do live in
 ### Per-make/model realistic vehicles for the catalog
 The GLB pipeline accepts drop-in models; what's missing is the assets. Chevy
 Colorado first — paid, ~$20–60 each on CGTrader/TurboSquid; prefer "inspired-by"
-models without manufacturer badges (trademark). Rank future purchases by the
-`vehicle_requests` table. (Elias picks/buys; see Elias Todo.)
+models without manufacturer badges (trademark). Rank future purchases by
+`/admin/requests`. (Elias picks/buys; see Elias Todo.)
 
-### End-to-end flow test with a real account
-Nobody has ever signed up. Auth → onboarding → 3D garage → chat log → mileage
-prompt → zone history → Glovebox upload → /admin/chats, on desktop and phone.
-Blocked on Elias creating the account (admin features key off his email).
-
-### Multi-vehicle polish
-- ~~Onboarding copy should say "Add another vehicle" for existing users~~ —
-  done 2026-08-02 (title swaps + back link for returning users).
-- After adding a vehicle, land on it (currently lands on the first).
-- Garage grid view once users have 3+; edit/delete a vehicle.
+### Finish the E2E sweep
+Elias is signed up and chatting (2026-08-02) — still untouched by a real user:
+Glovebox upload, VIN/plate photo OCR, insurance-via-chat, the initialization
+flow on a NEW vehicle (incl. customizations field), specs "log it" round-trip
+after the anti-deflection fix, and a motorcycle in a real garage.
 
 ## P2 — before public launch
 
-- **Recommendations from vehicle data** — we know year/make/model/mileage;
-  suggest likely-due services and correct parts/fluids. First step shipped
-  2026-08-02: the query intent now answers general questions ("what oil does
-  my car use?") from model knowledge, framed as guidance, and nudges the user
-  to log the confirmed answer. Next: proactive suggestions (e.g. on mileage
-  update, "vehicles like yours usually need a coolant flush by 60k") — maybe
-  a curated interval table per make/model or an LLM pass with confidence
-  gating.
+- **Recommendations, next step** — shipped so far: general-knowledge answers
+  with "log it" saving, stock specs at initialization, never-logged-service
+  nudges on fresh mileage. Next: per-make/model interval table (or LLM pass
+  with confidence gating) so intervals aren't one-size-fits-all — a diesel
+  truck and a Civic shouldn't share oil-change math.
 
 - **Watch for a Next patch fixing the sharp/libvips advisory** — the only
   remaining audit item after the Next 16 migration (merged to prod
@@ -49,6 +41,8 @@ Blocked on Elias creating the account (admin features key off his email).
 - **Expand the make/model catalog** — validate the CO-popular first guess against
   registration data; consider NHTSA vPIC (free) for full make/model data and VIN
   decode.
+- **Garage grid polish** — grid exists (/garage); revisit layout once someone
+  actually has 3+ vehicles.
 
 ## P3 — v2 ideas
 

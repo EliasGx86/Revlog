@@ -4,15 +4,19 @@ Running log of where the project stands. Update at the end of each working sessi
 See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 [Elias Todo.md](Elias%20Todo.md) for user-side action items.
 
-## Current status (2026-08-01)
+## Current status (2026-08-02, end of day)
 
-**Live:** https://revlog-blush.vercel.app
+**Live:** https://revlog-blush.vercel.app — Next 16 / React 19 in production.
 (note: `revlog.vercel.app` belongs to someone else — always use the `-blush` domain or attach a custom domain later)
+
+**Elias is signed up and using the app** — first real chat sessions happened
+2026-08-02 and directly drove the specs feature and prompt fixes.
 
 ### Infrastructure — done
 - **Vercel**: project `revlog` (team `eliasgx86s-projects`, Pro). GitHub repo `EliasGx86/Revlog` connected — every push to `main` auto-deploys to production; other branches get preview URLs.
-- **Supabase**: project "RevLog" (`zscbziojvrtgutbnpsra`, org "DarkModeOrg", Pro, us-east-1). Schema applied through migration `0002`. Costs ~$10/mo compute on top of the org's $25/mo Pro base.
-- **Env vars** (Vercel all environments + local `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`.
+- **Supabase**: project "RevLog" (`zscbziojvrtgutbnpsra`, org "DarkModeOrg", Pro, us-east-1). Schema applied through migration `0009`. Costs ~$10/mo compute on top of the org's $25/mo Pro base.
+- **Env vars** (Vercel all environments + local `.env.local`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`, `OPENAI_API_KEY`.
+- **Stack**: next@16.2.12, React 19, three 0.185 + r3f v9 + drei v10, ESLint 9 flat config, Tailwind 3.
 
 ### Features — done
 - Full v1 scaffold: auth (sign-in/up, middleware gate), onboarding, 3D garage home, chat bar with voice input, zone history modals, PostHog events.
@@ -20,28 +24,25 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 - **VIN + license plate**: optional onboarding fields, shown at a glance in the home header (plate badge, click-to-copy VIN). Migration `0002`.
 - **Photo OCR capture**: 📷 button on VIN/plate fields — take a picture, gpt-4o-mini vision extracts the text (`/api/vision/extract`). Strict VIN validation (17 chars, no I/O/Q).
 - **Motorcycles**: 4th body type. Renders the artist-made "Harley-Davidson Seventy-Two HD FXT 2015" by Alex.Ka. (CC-BY 4.0, `public/models/motorcycle.glb`) with paint tinting and engine/wheel click zones; the procedural bike remains as the loading fallback.
-- **3D visual overhaul (pass 1)**: extruded side-profile silhouettes with real wheel arches, dark glass greenhouses, clearcoat paint, spoked wheels, mirrors/bumpers/lights, showroom lighting with contact shadows and reflective floor. Dev-only `/dev/models` viewer + snapshot API for iterating without auth.
+- **3D pipeline**: artist GLBs for sedan/SUV/truck (trimmed pack, 295 KB) + the Harley; paint tinting, license plate rendered from the user's plate text, red pulsing due-zone highlights, procedural models as loading fallback. Dev-only `/dev/models` viewer + snapshot API.
+- **Chat brain**: intent router (log / query / insurance / spec / smalltalk) with brand-typo correction, inconsistency flagging, off-topic guardrail, and general-vehicle-knowledge answers that never deflect to "check your manual".
+- **Vehicle specs**: hardware facts (oil type, drain plug size, filters…) stored per vehicle — stated in chat, confirmed via "log it", or auto-pulled as stock values at **initialization** (on add + backfill for older vehicles; "stock" badge; customizations field overrides).
+- **Reminders & suggestions**: every entry checks pending alerts (🔔 in the reply, auto-completes satisfied ones); fresh odometer readings also nudge about never-logged services past their interval; overdue zones glow red on the model.
+- **Garage** (`/garage`): card grid, edit (year/color/mileage/plate/VIN), delete with cascade warning. Onboarding lands on the new vehicle, "Add another vehicle" copy for returning users.
+- **Learnability**: pulsing 💡 how-to sheet (mobile's answer to hover), desktop-only hover tooltips, chat suggestion chips, per-zone "what can I track here" ⓘ.
+- **Auth screens**: "garage at night" redesign (animated tachometer, Chakra Petch).
+- **Account & admin**: 👤 account modal (email, plan, garage, sign out); /admin hub + /admin/chats + /admin/requests (email allowlist + RLS, migration 0004).
+- **Hardening**: rate limits on all AI routes (Supabase-counted windows, fail open), middleware static-asset exclusions, mobile safe-area/dvh layout.
 
-### Not working yet — blockers to a usable app
-1. ~~`OPENAI_API_KEY` not set~~ — **done 2026-08-02**: key added to Vercel (Preview+Production) and `.env.local`, validated against the OpenAI API.
-2. **Stripe intentionally disabled for beta** — the app is free while in beta: onboarding skips checkout (sets `onboarded=true` directly) and the home page's subscription gate is commented out ([app/page.tsx](app/page.tsx)). The Stripe routes/env plumbing still exist; when beta ends, restore the gate and wire up Stripe products/keys/webhook.
-3. **`SUPABASE_SERVICE_ROLE_KEY` not set** — only needed once Stripe webhooks exist. Copy from Supabase dashboard → Settings → API.
-4. **PostHog key not set** — analytics silently no-op. Optional.
-5. **No user has ever signed up** — the full auth → onboarding → home flow is untested end to end.
-
-### Known debt
-- Next.js 14.2.15 has a known vulnerability; GitHub Dependabot reports 65 alerts (1 critical, 24 high) on the repo — mostly transitive. Bump Next.js + audit deps.
-- No rate limiting on API routes (add before public launch).
-- Mileage-based alerts are queued in the DB but nothing sends notifications yet (v2: Vercel Cron + Web Push/email).
+### Intentionally off during beta
+1. **Stripe** — the app is free: onboarding skips checkout and the home page's subscription gate is commented out ([app/page.tsx](app/page.tsx)). Restore the gate + wire products/keys/webhook + set `SUPABASE_SERVICE_ROLE_KEY` when beta ends.
+2. **PostHog key not set** — analytics silently no-op. Optional (Elias Todo).
+3. **Alert notifications** — reminders are in-chat only; push/email needs Vercel Cron + a sender (P3).
 
 ### Suggested next session
-1. End-to-end flow test once Elias signs up (see Elias Todo.md #1) — now also
-   covers plates, reminders, and the help sheet.
-2. Multi-vehicle polish (BACKLOG P1).
-3. Next.js security bump.
-
-### Admin
-- **/admin/chats** — beta admin view of every chat exchange (question, intent, reply, user, vehicle). Access: email allowlist in [lib/admin.ts](lib/admin.ts) (`ADMIN_EMAILS` env override) + RLS admin policies in migration 0004. Non-admins get a 404.
+1. Recommendations next step (BACKLOG P2) or garage grid polish for 3+ vehicles.
+2. Realistic catalog models, once Elias green-lights the budget.
+3. Road trip pre-trip checkup if Elias's spec ideas are ready (parked in BACKLOG).
 
 ## Issues & gotchas (so we don't re-learn them)
 
@@ -88,6 +89,13 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   hidden tab) — re-mounting (e.g. switching color) re-randomizes the pose.
 
 ## Session log
+
+- **2026-08-02l** — Night wrap: cleared .dev-snapshots (8 MB of session
+  screenshots), rewrote the Current Status / Features sections to match
+  reality (Next 16 live, Elias active), pruned BACKLOG of everything shipped
+  today, and rebuilt Elias Todo.md (sign-up/phone-check/Harley-license/next16
+  all done; new items: close the Dependabot PR, finish the E2E leftovers,
+  re-check mobile after the fixes).
 
 - **2026-08-02k** — **Next 16 merged to production** (Elias verified the 3D
   garage on the branch preview first). Stack now: next@16.2.12, React 19,
