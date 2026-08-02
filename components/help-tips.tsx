@@ -63,6 +63,10 @@ export function HelpButton() {
   const [seen, setSeen] = useState(true); // assume seen until we know (no flash)
 
   useEffect(() => {
+    // Hydration-safe localStorage read: the server must render "seen" (no
+    // pulse) and only the client can know otherwise, so this state genuinely
+    // belongs in an effect.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSeen(localStorage.getItem(SEEN_KEY) === "1");
   }, []);
 

@@ -40,7 +40,10 @@ function fmtSize(bytes: number | null): string {
 export default function GloveboxModal({ vehicleId, onClose }: Props) {
   const supabase = createSupabaseBrowserClient();
   const [folder, setFolder] = useState<string>(FOLDERS[0].slug);
-  const [docs, setDocs] = useState<DocumentRow[] | null>(null);
+  // Rows tagged with the folder they were fetched for — a folder switch shows
+  // "Loading…" by derivation (no setState-in-effect needed to clear).
+  const [fetched, setFetched] = useState<{ folder: string; rows: DocumentRow[] } | null>(null);
+  const docs = fetched && fetched.folder === folder ? fetched.rows : null;
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -53,11 +56,13 @@ export default function GloveboxModal({ vehicleId, onClose }: Props) {
       .eq("folder", folder)
       .order("created_at", { ascending: false })
       .returns<DocumentRow[]>();
-    setDocs(data ?? []);
+    setFetched({ folder, rows: data ?? [] });
   }, [supabase, vehicleId, folder]);
 
   useEffect(() => {
-    setDocs(null);
+    // Data fetch on open/folder change; setState happens after the await, but
+    // the rule can't see through the async callback.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [refresh]);
 

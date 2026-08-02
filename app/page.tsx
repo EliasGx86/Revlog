@@ -3,12 +3,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import HomeClient from "@/components/home-client";
 import { SERVICE_CATALOG, type Vehicle, type Profile, type Zone } from "@/lib/types";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: { v?: string };
-}) {
-  const supabase = createSupabaseServerClient();
+export default async function HomePage(
+  props: {
+    searchParams: Promise<{ v?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 

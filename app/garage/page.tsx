@@ -8,7 +8,7 @@ import type { Vehicle } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function GaragePage() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/sign-in");
 
