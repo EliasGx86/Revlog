@@ -191,17 +191,21 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      const { error: vErr } = await supabase.from("vehicles").insert({
-        user_id: user.id,
-        make,
-        model,
-        year,
-        color,
-        body_type: bodyType,
-        current_mileage: parseInt(mileage || "0", 10),
-        vin: vin.trim().toUpperCase() || null,
-        license_plate: plate.trim().toUpperCase() || null,
-      });
+      const { data: created, error: vErr } = await supabase
+        .from("vehicles")
+        .insert({
+          user_id: user.id,
+          make,
+          model,
+          year,
+          color,
+          body_type: bodyType,
+          current_mileage: parseInt(mileage || "0", 10),
+          vin: vin.trim().toUpperCase() || null,
+          license_plate: plate.trim().toUpperCase() || null,
+        })
+        .select("id")
+        .single();
       if (vErr) throw vErr;
 
       // BETA: free for everyone — no checkout. Mark onboarding complete and go.
@@ -211,7 +215,8 @@ export default function OnboardingPage() {
         .eq("id", user.id);
       if (pErr) throw pErr;
 
-      router.push("/");
+      // Land on the vehicle that was just added, not the first in the garage.
+      router.push(created?.id ? `/?v=${created.id}` : "/");
       router.refresh();
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : "Something went wrong");

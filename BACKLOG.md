@@ -33,16 +33,13 @@ Blocked on Elias creating the account (admin features key off his email).
   update, "vehicles like yours usually need a coolant flush by 60k") — maybe
   a curated interval table per make/model or an LLM pass with confidence
   gating.
-- **Road trip mode + fuel fill-ups** — log fill-ups (gallons, price,
-  odometer) via chat → real MPG trend; "road trip" button groups fill-ups,
-  distance, and costs per trip. Elias has more ideas coming — don't build
-  until specced.
 
-- **Next.js security bump** — 14.2.15 has a known vuln; Dependabot: 65 alerts
-  (1 critical). Bump Next + audit transitive deps.
-- **Rate limiting** on `/api/chat` and `/api/vision/extract` (Upstash/Vercel KV).
-- **Trim the vehicles GLB** — ships 17 vehicles (3.1 MB), we use 3; strip unused
-  nodes with gltf-transform.
+- **Next 15/16 major migration** — bumped to 14.2.35 (2026-08-02), which
+  closes the critical/high CVEs incl. the middleware bypass; `npm audit fix`
+  cleaned the rest except 5 advisories only fully fixed in Next 16 (mostly
+  self-hosted-specific; we're on Vercel's managed infra, and the remaining
+  eslint-config-next/glob one is dev-only). Full closure = Next 16 + React 19
+  migration — schedule as its own session.
 - **Mobile perf check** — MeshReflectorMaterial adds a render pass; gate behind a
   quality toggle if low-end phones struggle.
 - **Custom domain** — revlog.vercel.app is taken by someone else; current URL is
@@ -55,7 +52,6 @@ Blocked on Elias creating the account (admin features key off his email).
 - **Expand the make/model catalog** — validate the CO-popular first guess against
   registration data; consider NHTSA vPIC (free) for full make/model data and VIN
   decode.
-- **Admin: vehicle_requests view** — even a weekly SQL query works at first.
 
 ## P3 — v2 ideas
 
@@ -75,3 +71,13 @@ Blocked on Elias creating the account (admin features key off his email).
 - VIN decode (NHTSA vPIC) → auto-fill year/make/model from a scanned VIN.
 - Cost-of-ownership analytics, recall lookup, shop recommendations.
 - Mobile app via Expo.
+
+## Parked — Road trip feature (Elias has more ideas coming; don't build yet)
+
+A "Road trip" button that runs a **pre-trip checkup**: look at the vehicle's
+data (mileage, service history, pending alerts) and highlight what to do
+before leaving — "you're 4,800 mi past your last oil change", "tires were
+last rotated 9k ago — check tread", "engine air filter is due". Basically the
+reminder pass, but run on demand with a lower "coming up" threshold and
+framed as a checklist. Later extensions: fuel fill-up logging (gallons,
+price, odometer → real MPG trend), grouping fill-ups/distance/costs per trip.

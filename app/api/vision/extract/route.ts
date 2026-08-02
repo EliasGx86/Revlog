@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOpenAI, CHAT_MODEL } from "@/lib/openai";
+import { overLimit, recordApiEvent } from "@/lib/rate-limit";
 
 const Schema = z.object({
   // JPEG data URL produced client-side (downscaled before upload)
@@ -25,6 +26,18 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
+
+  // Rate limit BEFORE the vision call (counted via api_events, kind=vision).
+  if (
+    (await overLimit(supabase, { table: "api_events", kind: "vision", userId: user.id, seconds: 60, max: 8 })) ||
+    (await overLimit(supabase, { table: "api_events", kind: "vision", userId: user.id, seconds: 86_400, max: 100 }))
+  ) {
+    return NextResponse.json(
+      { error: "Too many scans — wait a minute and try again." },
+      { status: 429 }
+    );
+  }
+  await recordApiEvent(supabase, user.id, "vision");
 
   const openai = getOpenAI();
   const res = await openai.chat.completions.create({

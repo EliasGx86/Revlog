@@ -14,7 +14,7 @@
     "@react-three/fiber": "^8.17.10",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.4",
-    "next": "14.2.15",
+    "next": "^14.2.35",
     "openai": "^4.67.3",
     "posthog-js": "^1.165.0",
     "react": "^18.3.1",
@@ -24,6 +24,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.4.2",
+    "@gltf-transform/functions": "^4.4.2",
     "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",

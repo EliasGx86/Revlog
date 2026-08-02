@@ -84,6 +84,20 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 
 ## Session log
 
+- **2026-08-02h** — Backlog crunch: Next.js 14.2.15 → **14.2.35** +
+  `npm audit fix` (65 Dependabot alerts down to 5, all requiring the Next 16
+  major migration — new backlog item); **rate limiting** on /api/chat
+  (12/min, 400/day via chat_messages counts) and /api/vision/extract (8/min,
+  100/day via new `api_events` table, migration 0007 — applied to prod) with
+  a Supabase-counted sliding window, fails open, 429s before any OpenAI call;
+  **vehicles.glb trimmed 3.1 MB → 295 KB** (scripts/trim-vehicles.mjs strips
+  the 14 unused pack vehicles; full pack archived in 3D Model Files/; all 3
+  vehicles verified rendering with wheels/tint/plates); **/admin/requests**
+  view ranking vehicle_requests by count (cross-linked with /admin/chats);
+  onboarding now lands on the newly added vehicle (`/?v=<id>`). Road trip
+  feature re-specced as a pre-trip checkup and parked at the bottom of
+  BACKLOG.md per Elias.
+
 - **2026-08-02g** — Feedback sweep from Elias: year field is a real select
   (datalist was unusable on mobile); number inputs no longer pin a sticky 0
   (string state + numeric keyboard); mobile fixes (100dvh instead of vh so the

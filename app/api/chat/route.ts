@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOpenAI, CHAT_MODEL } from "@/lib/openai";
 import { SERVICE_CATALOG, type Vehicle, type MaintenanceLog } from "@/lib/types";
 import { buildReminderNote, completeMatchingAlerts } from "@/lib/reminders";
+import { overLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -68,6 +69,17 @@ export async function POST(req: Request) {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Rate limit BEFORE any OpenAI call — the logged exchanges are the counter.
+  if (
+    (await overLimit(supabase, { table: "chat_messages", userId: user.id, seconds: 60, max: 12 })) ||
+    (await overLimit(supabase, { table: "chat_messages", userId: user.id, seconds: 86_400, max: 400 }))
+  ) {
+    return NextResponse.json(
+      { error: "You're sending messages fast — give it a minute and try again." },
+      { status: 429 }
+    );
+  }
 
   const openai = getOpenAI();
 

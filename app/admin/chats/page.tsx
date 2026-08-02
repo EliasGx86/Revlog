@@ -44,7 +44,12 @@ export default async function AdminChatsPage() {
       <Link href="/" className="text-sm text-muted transition hover:text-white">
         ← Back to garage
       </Link>
-      <h1 className="mt-3 text-2xl font-semibold">Chat log</h1>
+      <div className="mt-3 flex items-baseline justify-between">
+        <h1 className="text-2xl font-semibold">Chat log</h1>
+        <Link href="/admin/requests" className="text-sm text-muted hover:text-white">
+          Model requests →
+        </Link>
+      </div>
       <p className="mt-1 text-sm text-muted">
         Last {rows?.length ?? 0} exchanges across all users, newest first.
         You&apos;re seeing this because you&apos;re signed in as an admin.
