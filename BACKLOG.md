@@ -34,12 +34,13 @@ Blocked on Elias creating the account (admin features key off his email).
   a curated interval table per make/model or an LLM pass with confidence
   gating.
 
-- **Next 15/16 major migration** — bumped to 14.2.35 (2026-08-02), which
-  closes the critical/high CVEs incl. the middleware bypass; `npm audit fix`
-  cleaned the rest except 5 advisories only fully fixed in Next 16 (mostly
-  self-hosted-specific; we're on Vercel's managed infra, and the remaining
-  eslint-config-next/glob one is dev-only). Full closure = Next 16 + React 19
-  migration — schedule as its own session.
+- **Next 16 migration — READY ON BRANCH `next16`** (2026-08-02): next@16.2.12,
+  React 19, r3f v9, drei v10, three 0.185, ESLint 9 flat config, async
+  cookies/searchParams. Build/typecheck/lint pass; audit down to 3 (sharp/
+  libvips inside Next's image optimizer, upstream fix pending). NOT merged:
+  the 3D scene needs a visual check on the Vercel preview URL first (the dev
+  browser pane's GPU wedged — see gotchas). Elias: open the next16 preview
+  deployment, spin all 4 vehicles, then say the word and we merge.
 - **Mobile perf check** — MeshReflectorMaterial adds a render pass; gate behind a
   quality toggle if low-end phones struggle.
 - **Custom domain** — revlog.vercel.app is taken by someone else; current URL is

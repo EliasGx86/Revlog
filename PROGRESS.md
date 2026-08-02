@@ -72,6 +72,11 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   `headlight` (they share a texture atlas + identical props) — which would make
   the tires glow. Since our pipeline keys off material names, use the
   individual commands instead: `weld` → `simplify` → `quantize` → `prune`.
+- **The dev Browser pane can permanently lose WebGL** after many 3D scene
+  mounts in one session: every canvas reports `isContextLost()=true`, even in
+  fresh tabs, and snapshots come out blank white. Not a code bug — verify 3D
+  on a Vercel preview/real browser when it happens. (Bit us verifying the
+  next16 branch.)
 - **Never `npm run build` while the dev server runs** — both write `.next/`;
   the dev server's chunk state corrupts (MODULE_NOT_FOUND './787.js', phantom
   "Unexpected token" syntax errors on valid files). Fix: stop dev server,
@@ -83,6 +88,19 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   hidden tab) — re-mounting (e.g. switching color) re-randomizes the pose.
 
 ## Session log
+
+- **2026-08-02i** — Elias's first real session surfaced the missing concept:
+  vehicle FACTS vs maintenance EVENTS. Shipped **vehicle_specs** (migration
+  0008, applied): new "spec" chat intent saves hardware facts (oil type,
+  drain plug size…) including history-aware "log it" confirmations of the
+  assistant's own guidance; queries answer saved specs with certainty; specs
+  section in the vehicle info modal. Also shipped **/garage** (card grid,
+  edit modal, delete with cascade warning; header shows 🏠 Garage at 2+
+  vehicles) and **proactive suggestions** on fresh odometer readings
+  (never-logged services past their typical interval). **Next 16 migration**
+  completed on branch `next16` (build/lint/tsc green, 3D unverified —
+  awaiting preview check; do not merge blind). Road-trip pre-trip checkup
+  re-specced and parked at the bottom of BACKLOG.md.
 
 - **2026-08-02h** — Backlog crunch: Next.js 14.2.15 → **14.2.35** +
   `npm audit fix` (65 Dependabot alerts down to 5, all requiring the Next 16
