@@ -1,65 +1,65 @@
 # RevLog — Backlog
 
-Prioritized list of everything we know we want but haven't built. Keep PROGRESS.md
-for "where we are"; this file is "what's next and why."
+Prioritized list of what's next and why. "Where we are" and completed work live
+in [PROGRESS.md](PROGRESS.md); things only Elias can do live in
+[Elias Todo.md](Elias%20Todo.md).
 
 ## P1 — makes or breaks the beta experience
 
-### 3D model visual overhaul
-~~Pass 1 (done 2026-08-02):~~ procedural models rebuilt — extruded side-profile
-silhouettes with wheel arches, dark glass greenhouses, clearcoat paint, detailed
-wheels, showroom lighting/shadows/reflective floor. Iterate with the `/dev/models`
-viewer (snapshots land in `.dev-snapshots/`).
+### Wire up the Harley motorcycle GLB
+`3D Model Files/harley-davidson_seventy-two_hd_fxt_2015.glb` (2.9 MB, downloaded
+2026-08-02) replaces the procedural motorcycle. Needs: license check (read the
+GLB's embedded `asset.extras.license`), node/material inspection, paint-tint
+target selection, zone hit-boxes (engine/tank → "hood", wheels), then slot into
+the existing pipeline in `components/car/glb-vehicle-model.tsx`. Consider
+gltf-transform to shrink it first.
 
-~~Pass 2 (done 2026-08-02):~~ sedan/SUV/truck swapped to artist-made GLB models
-(RgsDev pack, CC-BY 4.0, runtime-tinted, zone hit-boxes). Motorcycle still
-procedural — find/buy a good bike GLB.
+### Per-make/model realistic vehicles for the catalog
+The GLB pipeline accepts drop-in models; what's missing is the assets. Chevy
+Colorado first — paid, ~$20–60 each on CGTrader/TurboSquid; prefer "inspired-by"
+models without manufacturer badges (trademark). Rank future purchases by the
+`vehicle_requests` table. (Elias picks/buys; see Elias Todo.)
 
-Next levels:
-1. **Per-make/model realistic models for the catalog** (Chevy Colorado first) —
-   paid assets ~$20–60 each on CGTrader/TurboSquid; use "inspired-by" models
-   without manufacturer badges. The `vehicle_requests` table ranks what to buy
-   next. Pipeline already supports drop-in GLBs.
-2. **Trim the pack GLB** — it ships 17 vehicles (3.1 MB) but we use 3; strip
-   unused nodes with gltf-transform to cut load time.
-3. **Not recommended:** photoreal models — heavy on mobile; stylized-consistent
-   beats realistic-inconsistent.
-4. Perf check on mobile: MeshReflectorMaterial adds a render pass — if low-end
-   phones struggle, gate it behind a quality toggle.
-
-### Make/model catalog expansion
-Beta ships with 6 curated vehicles (CO-popular first guess: Colorado, F-150,
-Ram 1500, RAV4, Outback, Civic). Validate/adjust the list against real registration
-data, grow it as requests come in, and eventually back it by a proper vehicle DB
-(NHTSA vPIC API is free and has every make/model — could also auto-decode VINs).
+### End-to-end flow test with a real account
+Nobody has ever signed up. Auth → onboarding → 3D garage → chat log → mileage
+prompt → zone history → Glovebox upload → /admin/chats, on desktop and phone.
+Blocked on Elias creating the account (admin features key off his email).
 
 ### Multi-vehicle polish
-A basic switcher + "Add vehicle" button exists in the home header. Still needed:
-- Onboarding copy should say "Add another vehicle" when the user already has one
-  (and skip the "free while in beta" pitch).
-- After adding, land on the new vehicle (currently lands on the first).
-- A proper garage view (grid of vehicle cards) once users have 3+.
-- Delete/edit a vehicle.
+- Onboarding copy should say "Add another vehicle" for existing users (and skip
+  the beta pitch).
+- After adding a vehicle, land on it (currently lands on the first).
+- Garage grid view once users have 3+; edit/delete a vehicle.
 
 ## P2 — before public launch
 
-- **`OPENAI_API_KEY` in Vercel** — chat + photo OCR are dead until set.
-- **Re-enable Stripe when beta ends** — gate is commented out in `app/page.tsx`;
-  onboarding skips checkout. Restore + configure products/prices/webhook.
-- **Next.js security bump** — 14.2.15 has a known vuln; Dependabot shows 65 alerts
+- **Next.js security bump** — 14.2.15 has a known vuln; Dependabot: 65 alerts
   (1 critical). Bump Next + audit transitive deps.
 - **Rate limiting** on `/api/chat` and `/api/vision/extract` (Upstash/Vercel KV).
-- **Admin view for vehicle_requests** — even a weekly SQL query works at first.
-- **Email confirmation UX** — verify the Supabase sign-up confirmation flow works
-  end to end with a custom SMTP sender (default Supabase sender is rate-limited).
+- **Trim the vehicles GLB** — ships 17 vehicles (3.1 MB), we use 3; strip unused
+  nodes with gltf-transform.
+- **Mobile perf check** — MeshReflectorMaterial adds a render pass; gate behind a
+  quality toggle if low-end phones struggle.
+- **Custom domain** — revlog.vercel.app is taken by someone else; current URL is
+  revlog-blush.vercel.app. Buy a domain when branding settles.
+- **Supabase SMTP** — default email sender is heavily rate-limited; configure a
+  real sender (Resend/Postmark) before inviting beta users.
+- **Re-enable Stripe when beta ends** — gate commented out in `app/page.tsx`,
+  onboarding skips checkout; configure products/prices/webhook + set
+  `SUPABASE_SERVICE_ROLE_KEY`.
+- **Expand the make/model catalog** — validate the CO-popular first guess against
+  registration data; consider NHTSA vPIC (free) for full make/model data and VIN
+  decode.
+- **Admin: vehicle_requests view** — even a weekly SQL query works at first.
 
 ## P3 — v2 ideas
 
-- Alerts → actual notifications (Vercel Cron + Web Push/Resend email); monthly
+- Alerts → actual notifications (Vercel Cron + Web Push/Resend); monthly
   mileage-update prompt.
-- Receipt photo → OCR → autofill maintenance log (vision route already exists;
-  add a "receipt" kind).
-- Whisper for voice input if Web Speech accuracy disappoints.
-- VIN decode (NHTSA vPIC) → auto-fill year/make/model from the scanned VIN.
+- Receipt photo → OCR → autofill a maintenance log (vision route exists; add a
+  "receipt" kind and link it to Glovebox uploads).
+- Glovebox: camera capture on mobile, multi-file upload, file preview inline.
+- Whisper fallback if Web Speech accuracy disappoints.
+- VIN decode (NHTSA vPIC) → auto-fill year/make/model from a scanned VIN.
 - Cost-of-ownership analytics, recall lookup, shop recommendations.
 - Mobile app via Expo.

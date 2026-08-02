@@ -1,7 +1,8 @@
 # RevLog — Project Progress
 
 Running log of where the project stands. Update at the end of each working session.
-See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
+See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
+[Elias Todo.md](Elias%20Todo.md) for user-side action items.
 
 ## Current status (2026-08-01)
 
@@ -34,12 +35,34 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
 - Mileage-based alerts are queued in the DB but nothing sends notifications yet (v2: Vercel Cron + Web Push/email).
 
 ### Suggested next session
-1. Add `OPENAI_API_KEY`, decide on Stripe (configure test mode or bypass the gate).
-2. Sign up a real account and test the whole flow, including motorcycle onboarding and photo OCR.
+1. Wire up the Harley motorcycle GLB (see BACKLOG P1; license info needed from Elias first).
+2. End-to-end flow test once Elias signs up (see Elias Todo.md #1).
 3. Next.js security bump.
 
 ### Admin
 - **/admin/chats** — beta admin view of every chat exchange (question, intent, reply, user, vehicle). Access: email allowlist in [lib/admin.ts](lib/admin.ts) (`ADMIN_EMAILS` env override) + RLS admin policies in migration 0004. Non-admins get a 404.
+
+## Issues & gotchas (so we don't re-learn them)
+
+- **Sketchfab license fine print**: the vehicle pack's page implied CC0 but the
+  GLB's embedded metadata says **CC-BY 4.0** — attribution to RgsDev is required
+  and lives in the vehicle info modal. Check embedded `asset.extras.license` on
+  any downloaded model, not just the listing page.
+- **GLTFLoader renames nodes**: spaces become underscores ("Pickup wheel front
+  left" → "Pickup_wheel_front_left"). Normalize names before matching.
+- **The pack stores wheels as siblings**, not children, of each vehicle node —
+  cloning just the body node silently drops the wheels.
+- **Middleware ate the model file**: `/models/*.glb` was auth-redirected to
+  sign-in HTML, which the GLTF parser reported as cryptic JSON errors. Static
+  asset extensions are now excluded in the middleware matcher.
+- **Env var names**: `.env.local` had `OPENAI-API-KEY` (dashes) — invisible
+  failure; the app reads `OPENAI_API_KEY`.
+- **Dev-only**: the /dev/models ResizeObserver shim must defer its callback
+  (setTimeout 0) — synchronous callbacks fire setState during React render and
+  put Next dev into a full-reload crash loop that also exhausts WebGL contexts.
+- **Vercel CLI status checks**: `vercel ls` output line numbers shift between
+  invocations; grep for the `●` status marker instead of using fixed line
+  numbers when scripting.
 
 ## Session log
 
