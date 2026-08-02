@@ -22,7 +22,7 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
 - **3D visual overhaul (pass 1)**: extruded side-profile silhouettes with real wheel arches, dark glass greenhouses, clearcoat paint, spoked wheels, mirrors/bumpers/lights, showroom lighting with contact shadows and reflective floor. Dev-only `/dev/models` viewer + snapshot API for iterating without auth.
 
 ### Not working yet — blockers to a usable app
-1. **`OPENAI_API_KEY` not set** — chat (the core feature) and photo OCR are dead until this is added in Vercel → Settings → Environment Variables (and `.env.local` for local dev).
+1. ~~`OPENAI_API_KEY` not set~~ — **done 2026-08-02**: key added to Vercel (Preview+Production) and `.env.local`, validated against the OpenAI API.
 2. **Stripe intentionally disabled for beta** — the app is free while in beta: onboarding skips checkout (sets `onboarded=true` directly) and the home page's subscription gate is commented out ([app/page.tsx](app/page.tsx)). The Stripe routes/env plumbing still exist; when beta ends, restore the gate and wire up Stripe products/keys/webhook.
 3. **`SUPABASE_SERVICE_ROLE_KEY` not set** — only needed once Stripe webhooks exist. Copy from Supabase dashboard → Settings → API.
 4. **PostHog key not set** — analytics silently no-op. Optional.
@@ -38,7 +38,11 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
 2. Sign up a real account and test the whole flow, including motorcycle onboarding and photo OCR.
 3. Next.js security bump.
 
+### Admin
+- **/admin/chats** — beta admin view of every chat exchange (question, intent, reply, user, vehicle). Access: email allowlist in [lib/admin.ts](lib/admin.ts) (`ADMIN_EMAILS` env override) + RLS admin policies in migration 0004. Non-admins get a 404.
+
 ## Session log
 
+- **2026-08-02b** — OpenAI key configured + validated (fixed dashes→underscores in `.env.local`). Added `chat_messages` logging (migration 0004) and the `/admin/chats` admin view with double-layer access control.
 - **2026-08-02** — 3D overhaul pass 1: rewrote `car-model.tsx` (extruded silhouettes, arches, glass, clearcoat, detailed wheels) and `car-scene.tsx` (showroom lighting, ContactShadows, MeshReflectorMaterial floor). Added `/dev/models` dev viewer + `/api/dev/snapshot` for headless visual iteration.
 - **2026-08-01** — Reviewed dormant scaffold; deployed to Vercel (Pro) with GitHub auto-deploy; created Supabase project on upgraded Pro org and applied schema; renamed GarageIQ → RevLog; added VIN/plate tracking with photo OCR and motorcycle body type with 3D model. Made the app free for beta (payment step removed, subscription gate off), labeled all onboarding fields, and replaced the color picker with tap-friendly swatches. Added a curated make/model picker (6 CO-popular vehicles → mapped 3D body types) with a "request my make & model" button (new `vehicle_requests` table, migration 0003), plus a vehicle switcher and "+ Add vehicle" in the home header. Created BACKLOG.md.

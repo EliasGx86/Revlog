@@ -17,6 +17,29 @@ const RequestSchema = z.object({
 
 const SERVICE_TYPES = Object.keys(SERVICE_CATALOG);
 
+// Fire-and-forget beta logging: every exchange lands in chat_messages so the
+// admin view can show what users actually ask. Never fails the request.
+async function logChat(
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  userId: string,
+  vehicleId: string,
+  message: string,
+  intent: string,
+  reply: string
+) {
+  try {
+    await supabase.from("chat_messages").insert({
+      user_id: userId,
+      vehicle_id: vehicleId,
+      message,
+      intent,
+      reply,
+    });
+  } catch {
+    // logging must never break chat
+  }
+}
+
 const RouterSchema = z.object({
   intent: z.enum(["log", "query", "smalltalk"]),
 });
@@ -88,7 +111,7 @@ Return ONLY JSON like {"intent":"log"}.`,
     return await handleLog(body.message, vehicle, supabase, user.id);
   }
   if (intent === "query") {
-    return await handleQuery(body.message, vehicle, supabase, body.history);
+    return await handleQuery(body.message, vehicle, supabase, body.history, user.id);
   }
 
   // smalltalk fallback
@@ -104,9 +127,11 @@ Return ONLY JSON like {"intent":"log"}.`,
       { role: "user", content: body.message },
     ],
   });
+  const smalltalkReply = reply.choices[0].message.content || "👍";
+  await logChat(supabase, user.id, vehicle.id, body.message, "smalltalk", smalltalkReply);
   return NextResponse.json({
     intent: "smalltalk",
-    reply: reply.choices[0].message.content || "👍",
+    reply: smalltalkReply,
   });
 }
 
@@ -214,13 +239,15 @@ Return JSON with these fields (use null when unknown):
     .filter(Boolean)
     .join(" ");
 
+  const logReply = askMileage
+    ? `Logged: ${summary}. What's the current mileage?`
+    : `Logged: ${summary}. ✓`;
+  await logChat(supabase, userId, vehicle.id, message, "log", logReply);
   return NextResponse.json({
     intent: "log",
     logId: insertedLog.id,
     askMileage,
-    reply: askMileage
-      ? `Logged: ${summary}. What's the current mileage?`
-      : `Logged: ${summary}. ✓`,
+    reply: logReply,
   });
 }
 
@@ -228,7 +255,8 @@ async function handleQuery(
   message: string,
   vehicle: Vehicle,
   supabase: ReturnType<typeof createSupabaseServerClient>,
-  history: { role: "user" | "assistant"; content: string }[]
+  history: { role: "user" | "assistant"; content: string }[],
+  userId: string
 ) {
   const openai = getOpenAI();
   // Pull the most recent 50 logs for context. Cheap and well within mini's context window.
@@ -269,8 +297,10 @@ ${JSON.stringify(ctx, null, 2)}`,
     ],
   });
 
+  const queryReply = reply.choices[0].message.content || "I'm not sure — check your history.";
+  await logChat(supabase, userId, vehicle.id, message, "query", queryReply);
   return NextResponse.json({
     intent: "query",
-    reply: reply.choices[0].message.content || "I'm not sure — check your history.",
+    reply: queryReply,
   });
 }
