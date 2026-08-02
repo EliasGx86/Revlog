@@ -27,6 +27,17 @@ const TARGET_LENGTHS: Record<Exclude<BodyType, "motorcycle">, number> = {
   truck: 5.2,
 };
 
+// Zone hit-box centers as fractions of body length (+x = nose). A pickup's
+// hood/windshield sit much further forward than a sedan's.
+const ZONE_LAYOUT: Record<
+  Exclude<BodyType, "motorcycle">,
+  { hoodX: number; windshieldX: number }
+> = {
+  sedan: { hoodX: 0.3, windshieldX: 0.0 },
+  suv: { hoodX: 0.33, windshieldX: 0.03 },
+  truck: { hoodX: 0.36, windshieldX: 0.16 },
+};
+
 interface Props {
   bodyType: Exclude<BodyType, "motorcycle">;
   color: string;
@@ -144,7 +155,29 @@ function prepareVehicle(
   let box = new THREE.Box3().setFromObject(spin);
   let sz = box.getSize(new THREE.Vector3());
   if (sz.z > sz.x) {
-    spin.rotation.y = -Math.PI / 2; // long axis → X, nose toward +x
+    spin.rotation.y = -Math.PI / 2; // long axis → X
+    box = new THREE.Box3().setFromObject(spin);
+    sz = box.getSize(new THREE.Vector3());
+  }
+
+  // Nose toward +x, decided by where the headlight vs rear-light materials
+  // sit. (Wheel node names looked usable but are labeled inconsistently
+  // between vehicles in this pack; light materials are reliable.)
+  spin.updateMatrixWorld(true);
+  let headX = 0, headN = 0, tailX = 0, tailN = 0;
+  object.traverse((c) => {
+    if (!(c instanceof THREE.Mesh)) return;
+    const mats = Array.isArray(c.material) ? c.material : [c.material];
+    for (const m of mats) {
+      const mn = (m.name || "").toLowerCase().replace(/_/g, " ");
+      if (!mn.includes("headlight") && !mn.includes("rear light")) continue;
+      const cx = new THREE.Box3().setFromObject(c).getCenter(new THREE.Vector3()).x;
+      if (mn.includes("headlight")) { headX += cx; headN++; }
+      else { tailX += cx; tailN++; }
+    }
+  });
+  if (headN && tailN && headX / headN < tailX / tailN) {
+    spin.rotation.y += Math.PI;
     box = new THREE.Box3().setFromObject(spin);
     sz = box.getSize(new THREE.Vector3());
   }
@@ -227,19 +260,19 @@ export default function GlbVehicleModel({
 
       {/* HOOD hit-box: front quarter, above beltline */}
       <mesh
-        position={[L * 0.32, H * 0.55, 0]}
+        position={[L * ZONE_LAYOUT[bodyType].hoodX, H * 0.55, 0]}
         {...zoneHandlers("hood")}
       >
-        <boxGeometry args={[L * 0.34, H * 0.32, W * 0.92]} />
+        <boxGeometry args={[L * 0.3, H * 0.32, W * 0.92]} />
         {hitboxMaterial("hood")}
       </mesh>
 
       {/* WINDSHIELD hit-box: cabin glass band */}
       <mesh
-        position={[L * 0.02, H * 0.78, 0]}
+        position={[L * ZONE_LAYOUT[bodyType].windshieldX, H * 0.78, 0]}
         {...zoneHandlers("windshield")}
       >
-        <boxGeometry args={[L * 0.3, H * 0.4, W * 0.96]} />
+        <boxGeometry args={[L * 0.26, H * 0.4, W * 0.96]} />
         {hitboxMaterial("windshield")}
       </mesh>
 

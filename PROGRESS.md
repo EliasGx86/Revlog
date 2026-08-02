@@ -52,6 +52,9 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   left" → "Pickup_wheel_front_left"). Normalize names before matching.
 - **The pack stores wheels as siblings**, not children, of each vehicle node —
   cloning just the body node silently drops the wheels.
+- **The pack's front/rear wheel names are inconsistent between vehicles** (the
+  sedan's "front" wheels are at its rear) — orientation is detected from the
+  headlight vs rear-light material positions instead, which are reliable.
 - **Middleware ate the model file**: `/models/*.glb` was auth-redirected to
   sign-in HTML, which the GLTF parser reported as cryptic JSON errors. Static
   asset extensions are now excluded in the middleware matcher.
@@ -65,6 +68,8 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
   numbers when scripting.
 
 ## Session log
+
+- **2026-08-02d** — Fixed reversed hood/bed click zones (vehicles now auto-orient by headlight/rear-light material positions; per-body-type zone placement so the truck's windshield zone sits over the cab). Insurance via chat: new "insurance" intent extracts carrier/policy #/premium/coverage/renewal into `vehicle_insurance` (migration 0006), merges partial updates, answers questions from it, and shows it in the vehicle info panel.
 
 - **2026-08-02c** — GLB vehicle pipeline: sedan/SUV/truck now render from the CC-BY "Free Low Poly Vehicles Pack" by RgsDev (`public/models/vehicles.glb`, attribution in vehicle info modal) with runtime paint tinting, dark glass, and invisible zone hit-boxes; procedural models remain as motorcycle + loading fallback. Glovebox: per-vehicle document uploads (photos/PDFs, 10 MB cap) in preset folders, private `glovebox` storage bucket + `documents` table (migration 0005). Zone modals now show per-zone trackable services + an example phrase when empty. Middleware now skips auth for static model files.
 

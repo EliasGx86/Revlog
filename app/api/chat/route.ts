@@ -41,7 +41,16 @@ async function logChat(
 }
 
 const RouterSchema = z.object({
-  intent: z.enum(["log", "query", "smalltalk"]),
+  intent: z.enum(["log", "query", "insurance", "smalltalk"]),
+});
+
+const InsuranceSchema = z.object({
+  carrier: z.string().nullable(),
+  policy_number: z.string().nullable(),
+  monthly_premium: z.number().nullable(),
+  coverage: z.string().nullable(),
+  renewal_date: z.string().nullable(),
+  notes: z.string().nullable(),
 });
 
 const LogSchema = z.object({
@@ -90,7 +99,8 @@ export async function POST(req: Request) {
         role: "system",
         content: `You classify a user's message about their car as one of:
 - "log": they're telling us they performed a maintenance service (past or completed action). Examples: "changed my oil yesterday", "just put new tires on", "got the brakes done at 50k".
-- "query": they're asking a question about their maintenance history or vehicle. Examples: "when did I last change my oil?", "what brand of oil did I use?", "is my oil change due?".
+- "query": they're asking a question about their maintenance history, insurance, or vehicle. Examples: "when did I last change my oil?", "what brand of oil did I use?", "what's my policy number?", "how much is my insurance?".
+- "insurance": they're SHARING insurance details to store. Examples: "my insurance is Progressive, policy ABC-123", "I pay $142 a month with Geico", "insurance renews March 15th".
 - "smalltalk": anything else.
 
 Return ONLY JSON like {"intent":"log"}.`,
@@ -99,7 +109,7 @@ Return ONLY JSON like {"intent":"log"}.`,
     ],
   });
 
-  let intent: "log" | "query" | "smalltalk" = "smalltalk";
+  let intent: z.infer<typeof RouterSchema>["intent"] = "smalltalk";
   try {
     const parsed = RouterSchema.parse(JSON.parse(router.choices[0].message.content || "{}"));
     intent = parsed.intent;
@@ -112,6 +122,9 @@ Return ONLY JSON like {"intent":"log"}.`,
   }
   if (intent === "query") {
     return await handleQuery(body.message, vehicle, supabase, body.history, user.id);
+  }
+  if (intent === "insurance") {
+    return await handleInsurance(body.message, vehicle, supabase, user.id);
   }
 
   // smalltalk fallback
@@ -263,6 +276,85 @@ Return JSON with these fields (use null when unknown):
   });
 }
 
+async function handleInsurance(
+  message: string,
+  vehicle: Vehicle,
+  supabase: ReturnType<typeof createSupabaseServerClient>,
+  userId: string
+) {
+  const openai = getOpenAI();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const extraction = await openai.chat.completions.create({
+    model: CHAT_MODEL,
+    temperature: 0,
+    response_format: { type: "json_object" },
+    messages: [
+      {
+        role: "system",
+        content: `Extract insurance details from the user's message about their ${vehicle.year} ${vehicle.make} ${vehicle.model}.
+Today's date is ${today} (for relative dates like "next month").
+
+Return JSON with these fields (null when not mentioned):
+{
+  "carrier": insurer name, e.g. "Progressive",
+  "policy_number": string exactly as written,
+  "monthly_premium": number in dollars (convert "yearly"/"every 6 months" to monthly),
+  "coverage": short description like "full coverage" or "liability only",
+  "renewal_date": "YYYY-MM-DD",
+  "notes": anything else worth keeping, short
+}`,
+      },
+      { role: "user", content: message },
+    ],
+  });
+
+  let extracted: z.infer<typeof InsuranceSchema>;
+  try {
+    extracted = InsuranceSchema.parse(JSON.parse(extraction.choices[0].message.content || "{}"));
+  } catch {
+    return NextResponse.json({
+      intent: "insurance",
+      reply: "I couldn't quite parse that — try something like \"my insurance is Progressive, policy ABC-123, $140 a month\".",
+    });
+  }
+
+  // Merge over the existing record so partial updates never wipe stored fields.
+  const { data: existing } = await supabase
+    .from("vehicle_insurance")
+    .select("*")
+    .eq("vehicle_id", vehicle.id)
+    .maybeSingle();
+
+  const merged = {
+    vehicle_id: vehicle.id,
+    user_id: userId,
+    carrier: extracted.carrier ?? existing?.carrier ?? null,
+    policy_number: extracted.policy_number ?? existing?.policy_number ?? null,
+    monthly_premium: extracted.monthly_premium ?? existing?.monthly_premium ?? null,
+    coverage: extracted.coverage ?? existing?.coverage ?? null,
+    renewal_date: extracted.renewal_date ?? existing?.renewal_date ?? null,
+    notes: extracted.notes ?? existing?.notes ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: upErr } = await supabase.from("vehicle_insurance").upsert(merged);
+  if (upErr) {
+    return NextResponse.json({ error: "Failed to save insurance info" }, { status: 500 });
+  }
+
+  const bits = [
+    merged.carrier,
+    merged.policy_number && `policy ${merged.policy_number}`,
+    merged.monthly_premium != null && `$${merged.monthly_premium}/mo`,
+    merged.renewal_date && `renews ${merged.renewal_date}`,
+  ].filter(Boolean);
+  const reply = `Saved your insurance info: ${bits.join(" · ") || "noted"}. It's in the vehicle info panel (tap your car's name up top).`;
+
+  await logChat(supabase, userId, vehicle.id, message, "insurance", reply);
+  return NextResponse.json({ intent: "insurance", reply });
+}
+
 async function handleQuery(
   message: string,
   vehicle: Vehicle,
@@ -289,6 +381,13 @@ async function handleQuery(
     notes: l.notes,
   }));
 
+  // Insurance record (if any) so questions like "what's my policy number" work.
+  const { data: insurance } = await supabase
+    .from("vehicle_insurance")
+    .select("carrier, policy_number, monthly_premium, coverage, renewal_date, notes")
+    .eq("vehicle_id", vehicle.id)
+    .maybeSingle();
+
   const reply = await openai.chat.completions.create({
     model: CHAT_MODEL,
     temperature: 0.2,
@@ -299,10 +398,13 @@ async function handleQuery(
 Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}, currently ${vehicle.current_mileage.toLocaleString()} mi.
 Today's date is ${new Date().toISOString().slice(0, 10)}.
 
-Answer the user's question using ONLY the maintenance history below. If the answer isn't in the history, say so plainly. Be brief — one to three sentences. Don't invent dates, mileages, or product details.
+Answer the user's question using ONLY the data below. If the answer isn't there, say so plainly. Be brief — one to three sentences. Don't invent dates, mileages, product details, or policy info.
 
 Maintenance history (most recent first):
-${JSON.stringify(ctx, null, 2)}`,
+${JSON.stringify(ctx, null, 2)}
+
+Insurance on file:
+${JSON.stringify(insurance ?? "none")}`,
       },
       ...history.map((h) => ({ role: h.role, content: h.content })),
       { role: "user", content: message },

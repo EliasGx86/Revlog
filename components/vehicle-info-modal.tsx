@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type { Vehicle } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { Vehicle, VehicleInsurance } from "@/lib/types";
 
 // At-a-glance text info for the selected vehicle. Opened from the home header.
 
@@ -19,6 +20,17 @@ const BODY_LABELS: Record<Vehicle["body_type"], string> = {
 
 export default function VehicleInfoModal({ vehicle, onClose }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
+  const [insurance, setInsurance] = useState<VehicleInsurance | null>(null);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    supabase
+      .from("vehicle_insurance")
+      .select("*")
+      .eq("vehicle_id", vehicle.id)
+      .maybeSingle<VehicleInsurance>()
+      .then(({ data }) => setInsurance(data ?? null));
+  }, [vehicle.id]);
 
   async function copy(label: string, value: string) {
     try {
@@ -98,6 +110,51 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
             </div>
           ))}
         </dl>
+
+        <h3 className="mt-5 text-sm font-semibold">Insurance</h3>
+        {insurance ? (
+          <dl className="mt-1 divide-y divide-border">
+            {[
+              { label: "Carrier", value: insurance.carrier },
+              { label: "Policy #", value: insurance.policy_number, copy: true },
+              {
+                label: "Premium",
+                value: insurance.monthly_premium != null ? `$${insurance.monthly_premium}/mo` : null,
+              },
+              { label: "Coverage", value: insurance.coverage },
+              {
+                label: "Renews",
+                value: insurance.renewal_date
+                  ? new Date(insurance.renewal_date).toLocaleDateString()
+                  : null,
+              },
+              { label: "Notes", value: insurance.notes },
+            ]
+              .filter((r) => r.value)
+              .map((r) => (
+                <div key={r.label} className="flex items-center justify-between gap-4 py-2">
+                  <dt className="text-sm text-muted">{r.label}</dt>
+                  <dd className="flex items-center gap-2 text-sm">
+                    {r.value}
+                    {r.copy && (
+                      <button
+                        onClick={() => copy(r.label, r.value as string)}
+                        className="rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:text-white"
+                      >
+                        {copied === r.label ? "Copied ✓" : "Copy"}
+                      </button>
+                    )}
+                  </dd>
+                </div>
+              ))}
+          </dl>
+        ) : (
+          <p className="mt-1 text-xs text-muted">
+            Nothing on file — tell the chat bar something like &quot;my insurance
+            is Progressive, policy ABC-123, $140 a month&quot; and it&apos;ll show
+            up here.
+          </p>
+        )}
 
         <p className="mt-4 text-xs text-muted">
           Service history lives on the 3D model — click the hood, wheels, or

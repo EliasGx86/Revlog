@@ -36,6 +36,18 @@ export interface Vehicle {
   updated_at: string;
 }
 
+export interface VehicleInsurance {
+  vehicle_id: string;
+  user_id: string;
+  carrier: string | null;
+  policy_number: string | null;
+  monthly_premium: number | null;
+  coverage: string | null;
+  renewal_date: string | null;
+  notes: string | null;
+  updated_at: string;
+}
+
 export interface MaintenanceLog {
   id: string;
   vehicle_id: string;
