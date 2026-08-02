@@ -14,10 +14,10 @@ Things only you can do (accounts, money, judgment calls). Everything else is in
    Tell me anything that feels off — that's the first real end-to-end test.
 2. **Spin the new 3D garage on your phone** — the artist models + reflective
    floor shipped; I need to know if it feels smooth or janky on mobile hardware.
-3. **Harley model license** — you dropped
-   `3D Model Files/harley-davidson_seventy-two_hd_fxt_2015.glb` in the project.
-   Send me the Sketchfab page link you got it from so I can record the license
-   and attribution properly before wiring it in as the motorcycle model.
+3. ~~**Harley model license**~~ — done, no action needed: the GLB's embedded
+   metadata had the license (CC-BY 4.0), author (Alex.Ka.), and source URL.
+   The Harley is now the motorcycle model, attribution shown in the vehicle
+   info modal.
 
 ## Decisions when you're ready
 

@@ -6,14 +6,6 @@ in [PROGRESS.md](PROGRESS.md); things only Elias can do live in
 
 ## P1 — makes or breaks the beta experience
 
-### Wire up the Harley motorcycle GLB
-`3D Model Files/harley-davidson_seventy-two_hd_fxt_2015.glb` (2.9 MB, downloaded
-2026-08-02) replaces the procedural motorcycle. Needs: license check (read the
-GLB's embedded `asset.extras.license`), node/material inspection, paint-tint
-target selection, zone hit-boxes (engine/tank → "hood", wheels), then slot into
-the existing pipeline in `components/car/glb-vehicle-model.tsx`. Consider
-gltf-transform to shrink it first.
-
 ### Per-make/model realistic vehicles for the catalog
 The GLB pipeline accepts drop-in models; what's missing is the assets. Chevy
 Colorado first — paid, ~$20–60 each on CGTrader/TurboSquid; prefer "inspired-by"

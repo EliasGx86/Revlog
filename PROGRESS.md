@@ -19,7 +19,7 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 - Renamed GarageIQ → RevLog throughout.
 - **VIN + license plate**: optional onboarding fields, shown at a glance in the home header (plate badge, click-to-copy VIN). Migration `0002`.
 - **Photo OCR capture**: 📷 button on VIN/plate fields — take a picture, gpt-4o-mini vision extracts the text (`/api/vision/extract`). Strict VIN validation (17 chars, no I/O/Q).
-- **Motorcycles**: 4th body type with its own procedural 3D model (engine + wheels click zones; engine maps to the "hood" service zone).
+- **Motorcycles**: 4th body type. Renders the artist-made "Harley-Davidson Seventy-Two HD FXT 2015" by Alex.Ka. (CC-BY 4.0, `public/models/motorcycle.glb`) with paint tinting and engine/wheel click zones; the procedural bike remains as the loading fallback.
 - **3D visual overhaul (pass 1)**: extruded side-profile silhouettes with real wheel arches, dark glass greenhouses, clearcoat paint, spoked wheels, mirrors/bumpers/lights, showroom lighting with contact shadows and reflective floor. Dev-only `/dev/models` viewer + snapshot API for iterating without auth.
 
 ### Not working yet — blockers to a usable app
@@ -35,7 +35,7 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 - Mileage-based alerts are queued in the DB but nothing sends notifications yet (v2: Vercel Cron + Web Push/email).
 
 ### Suggested next session
-1. Wire up the Harley motorcycle GLB (see BACKLOG P1; license info needed from Elias first).
+1. License plate text on the 3D model (BACKLOG P1).
 2. End-to-end flow test once Elias signs up (see Elias Todo.md #1).
 3. Next.js security bump.
 
@@ -66,8 +66,27 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 - **Vercel CLI status checks**: `vercel ls` output line numbers shift between
   invocations; grep for the `●` status marker instead of using fixed line
   numbers when scripting.
+- **gltf-transform `optimize` merges materials**: its dedup/palette passes
+  renamed `body_color` → `PaletteMaterialNNN` and merged `tire` into
+  `headlight` (they share a texture atlas + identical props) — which would make
+  the tires glow. Since our pipeline keys off material names, use the
+  individual commands instead: `weld` → `simplify` → `quantize` → `prune`.
+- **Headless `__snap` renders have no ground contact**: the snapshot path is a
+  bare `gl.render` without contact-shadow/reflection passes, so every vehicle
+  looks like it's floating. Compare against a known-good model (sedan) before
+  chasing grounding "bugs". Animations don't advance either (no rAF in a
+  hidden tab) — re-mounting (e.g. switching color) re-randomizes the pose.
 
 ## Session log
+
+- **2026-08-02e** — Harley GLB wired in as the motorcycle model
+  (`components/car/glb-motorcycle-model.tsx`): license confirmed CC-BY 4.0 from
+  the GLB's embedded metadata (author Alex.Ka., source URL embedded too — no
+  Sketchfab link needed from Elias), optimized 2.87 MB → 1.49 MB with
+  weld/simplify/quantize/prune (NOT `optimize` — see gotcha below), paint tint
+  via the `body_color` material, headlight/brakelight emissive, engine/tank +
+  wheel hit-boxes (wheel anchors derived from the `tire` material's bbox ends).
+  Attribution added to the vehicle info modal for motorcycles.
 
 - **2026-08-02d** — Fixed reversed hood/bed click zones (vehicles now auto-orient by headlight/rear-light material positions; per-body-type zone placement so the truck's windshield zone sits over the cab). Insurance via chat: new "insurance" intent extracts carrier/policy #/premium/coverage/renewal into `vehicle_insurance` (migration 0006), merges partial updates, answers questions from it, and shows it in the vehicle info panel.
 

@@ -10,6 +10,7 @@ import {
 } from "@react-three/drei";
 import CarModel from "./car-model";
 import GlbVehicleModel from "./glb-vehicle-model";
+import GlbMotorcycleModel from "./glb-motorcycle-model";
 import type { BodyType, Zone } from "@/lib/types";
 
 interface Props {
@@ -98,13 +99,25 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
         />
 
         {bodyType === "motorcycle" ? (
-          <CarModel
-            bodyType={bodyType}
-            color={color}
-            onZoneClick={onZoneClick}
-            hoveredZone={hoveredZone}
-            setHoveredZone={setHoveredZone}
-          />
+          // Artist-made Harley; falls back to the procedural bike while loading.
+          <Suspense
+            fallback={
+              <CarModel
+                bodyType={bodyType}
+                color={color}
+                onZoneClick={onZoneClick}
+                hoveredZone={hoveredZone}
+                setHoveredZone={setHoveredZone}
+              />
+            }
+          >
+            <GlbMotorcycleModel
+              color={color}
+              onZoneClick={onZoneClick}
+              hoveredZone={hoveredZone}
+              setHoveredZone={setHoveredZone}
+            />
+          </Suspense>
         ) : (
           // Artist-made pack model; falls back to the procedural car while loading.
           <Suspense

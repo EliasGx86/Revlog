@@ -162,6 +162,12 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
         </p>
         <p className="mt-2 text-[10px] text-muted/70">
           3D vehicles: &quot;Free Low Poly Vehicles Pack&quot; by RgsDev (CC-BY 4.0)
+          {vehicle.body_type === "motorcycle" && (
+            <>
+              {" · "}&quot;Harley-Davidson Seventy-Two HD FXT 2015&quot; by
+              Alex.Ka. (CC-BY 4.0)
+            </>
+          )}
         </p>
       </div>
     </div>
