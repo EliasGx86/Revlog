@@ -30,7 +30,8 @@ if (typeof window !== "undefined" && !window.__roShimmed) {
     }
     observe(el: Element) {
       this.els.add(el);
-      this.measure();
+      // Defer: a synchronous callback here fires setState during React render.
+      setTimeout(() => this.measure(), 0);
     }
     unobserve(el: Element) {
       this.els.delete(el);

@@ -8,6 +8,7 @@ import type { Profile, Vehicle, Zone } from "@/lib/types";
 import ChatBar from "@/components/chat-bar";
 import ZoneHistoryModal from "@/components/zone-history-modal";
 import VehicleInfoModal from "@/components/vehicle-info-modal";
+import GloveboxModal from "@/components/glovebox-modal";
 import { trackEvent } from "@/components/posthog-provider";
 
 // Three.js is heavy and DOM-dependent — load only on the client.
@@ -30,6 +31,7 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
   const router = useRouter();
   const [zone, setZone] = useState<Zone | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showGlovebox, setShowGlovebox] = useState(false);
   const [vinCopied, setVinCopied] = useState(false);
 
   function copyVin() {
@@ -97,6 +99,12 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
               ))}
             </select>
           )}
+          <button
+            onClick={() => setShowGlovebox(true)}
+            className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
+          >
+            🗂 Glovebox
+          </button>
           <Link
             href="/onboarding"
             className="rounded-md border border-border bg-surface/60 px-3 py-1.5 text-xs text-muted hover:text-white"
@@ -132,6 +140,10 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
 
       {showInfo && (
         <VehicleInfoModal vehicle={vehicle} onClose={() => setShowInfo(false)} />
+      )}
+
+      {showGlovebox && (
+        <GloveboxModal vehicleId={vehicle.id} onClose={() => setShowGlovebox(false)} />
       )}
 
       {/* zone modal */}

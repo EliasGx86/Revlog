@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   OrbitControls,
@@ -9,6 +9,7 @@ import {
   MeshReflectorMaterial,
 } from "@react-three/drei";
 import CarModel from "./car-model";
+import GlbVehicleModel from "./glb-vehicle-model";
 import type { BodyType, Zone } from "@/lib/types";
 
 interface Props {
@@ -39,7 +40,7 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
     <div className="relative h-full w-full">
       <Canvas
         shadows
-        camera={{ position: [5.4, 2.4, 5.4], fov: 33 }}
+        camera={{ position: [6.2, 2.8, 6.2], fov: 33 }}
         dpr={[1, 2]}
         gl={{ antialias: true, preserveDrawingBuffer: preserveBuffer }}
       >
@@ -96,13 +97,36 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
           color="#000000"
         />
 
-        <CarModel
-          bodyType={bodyType}
-          color={color}
-          onZoneClick={onZoneClick}
-          hoveredZone={hoveredZone}
-          setHoveredZone={setHoveredZone}
-        />
+        {bodyType === "motorcycle" ? (
+          <CarModel
+            bodyType={bodyType}
+            color={color}
+            onZoneClick={onZoneClick}
+            hoveredZone={hoveredZone}
+            setHoveredZone={setHoveredZone}
+          />
+        ) : (
+          // Artist-made pack model; falls back to the procedural car while loading.
+          <Suspense
+            fallback={
+              <CarModel
+                bodyType={bodyType}
+                color={color}
+                onZoneClick={onZoneClick}
+                hoveredZone={hoveredZone}
+                setHoveredZone={setHoveredZone}
+              />
+            }
+          >
+            <GlbVehicleModel
+              bodyType={bodyType}
+              color={color}
+              onZoneClick={onZoneClick}
+              hoveredZone={hoveredZone}
+              setHoveredZone={setHoveredZone}
+            />
+          </Suspense>
+        )}
 
         {preserveBuffer && <DevSnapHook />}
 
@@ -110,7 +134,7 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
           enablePan={false}
           enableZoom
           minDistance={4.5}
-          maxDistance={12}
+          maxDistance={13}
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI / 2.15}
           autoRotate={false}

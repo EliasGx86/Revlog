@@ -11,13 +11,17 @@ silhouettes with wheel arches, dark glass greenhouses, clearcoat paint, detailed
 wheels, showroom lighting/shadows/reflective floor. Iterate with the `/dev/models`
 viewer (snapshots land in `.dev-snapshots/`).
 
+~~Pass 2 (done 2026-08-02):~~ sedan/SUV/truck swapped to artist-made GLB models
+(RgsDev pack, CC-BY 4.0, runtime-tinted, zone hit-boxes). Motorcycle still
+procedural — find/buy a good bike GLB.
+
 Next levels:
-1. **Per-body-type GLB swap (when procedural hits its ceiling):** low-poly stylized
-   GLB models from CC0/low-cost packs (Poly Pizza, Sketchfab, Kenney car kit),
-   runtime-tinted body material, invisible hit-boxes for the click zones.
-2. **Per-make/model variants for the catalog** (Chevy Colorado first) — procedural
-   proportion presets per catalog entry, or GLBs. The `vehicle_requests` table
-   ranks what to build next.
+1. **Per-make/model realistic models for the catalog** (Chevy Colorado first) —
+   paid assets ~$20–60 each on CGTrader/TurboSquid; use "inspired-by" models
+   without manufacturer badges. The `vehicle_requests` table ranks what to buy
+   next. Pipeline already supports drop-in GLBs.
+2. **Trim the pack GLB** — it ships 17 vehicles (3.1 MB) but we use 3; strip
+   unused nodes with gltf-transform to cut load time.
 3. **Not recommended:** photoreal models — heavy on mobile; stylized-consistent
    beats realistic-inconsistent.
 4. Perf check on mobile: MeshReflectorMaterial adds a render pass — if low-end

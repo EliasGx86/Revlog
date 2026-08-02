@@ -19,6 +19,14 @@ const ZONE_SERVICES: Record<Zone, string[]> = {
   other: [],
 };
 
+// Shown in the empty state so users know what to say for this zone.
+const ZONE_EXAMPLES: Record<Zone, string> = {
+  hood: "changed my oil today with Mobil 1 full synthetic at 120,000 miles",
+  wheels: "rotated my tires and put on new brake pads at 85,000 miles",
+  windshield: "replaced my wiper blades with Bosch Icons",
+  other: "flushed the AC system at the dealership today",
+};
+
 interface Props {
   zone: Zone;
   vehicleId: string;
@@ -60,10 +68,27 @@ export default function ZoneHistoryModal({ zone, vehicleId, onClose }: Props) {
         <div className="mt-4">
           {logs === null && <p className="text-sm text-muted">Loading…</p>}
           {logs && logs.length === 0 && (
-            <p className="text-sm text-muted">
-              No history yet. Tell RevLog when you service something — like
-              &quot;changed my oil today, full synthetic Mobil 1.&quot;
-            </p>
+            <div>
+              <p className="text-sm text-muted">
+                Nothing logged here yet. This zone tracks:
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {ZONE_SERVICES[zone].map((s) => (
+                  <li
+                    key={s}
+                    className="rounded-full border border-border bg-bg/60 px-2.5 py-1 text-xs text-muted"
+                  >
+                    {SERVICE_CATALOG[s]?.label || s}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-sm text-muted">
+                Just tell RevLog in the chat bar when you do one — for example:
+              </p>
+              <p className="mt-1 rounded-lg border border-border bg-bg/60 p-2.5 text-sm italic text-white/80">
+                &quot;{ZONE_EXAMPLES[zone]}&quot;
+              </p>
+            </div>
           )}
           {logs && logs.length > 0 && (
             <ul className="space-y-2">
