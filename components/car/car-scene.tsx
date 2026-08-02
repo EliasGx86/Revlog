@@ -16,6 +16,7 @@ import type { BodyType, Zone } from "@/lib/types";
 interface Props {
   bodyType: BodyType;
   color: string;
+  licensePlate?: string | null;
   onZoneClick: (zone: Zone) => void;
   /** Dev-only: lets the /dev/models page read canvas pixels for snapshots. */
   preserveBuffer?: boolean;
@@ -34,7 +35,7 @@ function DevSnapHook() {
   return null;
 }
 
-export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer }: Props) {
+export default function CarScene({ bodyType, color, licensePlate, onZoneClick, preserveBuffer }: Props) {
   const [hoveredZone, setHoveredZone] = useState<Zone | null>(null);
 
   return (
@@ -113,6 +114,7 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
           >
             <GlbMotorcycleModel
               color={color}
+              licensePlate={licensePlate}
               onZoneClick={onZoneClick}
               hoveredZone={hoveredZone}
               setHoveredZone={setHoveredZone}
@@ -134,6 +136,7 @@ export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer 
             <GlbVehicleModel
               bodyType={bodyType}
               color={color}
+              licensePlate={licensePlate}
               onZoneClick={onZoneClick}
               hoveredZone={hoveredZone}
               setHoveredZone={setHoveredZone}

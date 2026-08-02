@@ -57,13 +57,20 @@ const SWATCHES = ["#cc2222", "#1e4fd8", "#f2f2f2", "#111114", "#c7c9cc", "#e46b1
 export default function ModelDevPage() {
   const [bodyType, setBodyType] = useState<BodyType>("sedan");
   const [color, setColor] = useState("#cc2222");
+  const [plate, setPlate] = useState("REV 402");
 
   if (process.env.NODE_ENV === "production") notFound();
 
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <div className="absolute inset-0">
-        <CarScene bodyType={bodyType} color={color} onZoneClick={() => {}} preserveBuffer />
+        <CarScene
+          bodyType={bodyType}
+          color={color}
+          licensePlate={plate}
+          onZoneClick={() => {}}
+          preserveBuffer
+        />
       </div>
       <div className="absolute left-1/2 top-4 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-surface/80 px-3 py-2 backdrop-blur">
         {TYPES.map((t) => (
@@ -89,6 +96,13 @@ export default function ModelDevPage() {
             style={{ backgroundColor: c }}
           />
         ))}
+        <span className="mx-1 h-4 w-px bg-border" />
+        <input
+          value={plate}
+          onChange={(e) => setPlate(e.target.value)}
+          placeholder="plate"
+          className="w-20 rounded-md border border-border bg-transparent px-2 py-0.5 text-xs"
+        />
       </div>
     </div>
   );

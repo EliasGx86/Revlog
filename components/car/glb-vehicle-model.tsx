@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import type { BodyType, Zone } from "@/lib/types";
+import { findPlateAnchor, PlateMesh, type PlateAnchor } from "./license-plate";
 
 // Artist-made vehicles from the "Free Low Poly Vehicles Pack" by RgsDev
 // (https://sketchfab.com/rgsdev), licensed CC-BY-4.0 — attribution shown in
@@ -41,6 +42,7 @@ const ZONE_LAYOUT: Record<
 interface Props {
   bodyType: Exclude<BodyType, "motorcycle">;
   color: string;
+  licensePlate?: string | null;
   onZoneClick?: (zone: Zone) => void;
   hoveredZone?: Zone | null;
   setHoveredZone?: (zone: Zone | null) => void;
@@ -50,6 +52,7 @@ interface Prepared {
   object: THREE.Group;
   size: THREE.Vector3; // bbox size after normalization (x = length)
   wheelPositions: THREE.Vector3[];
+  plateAnchors: { rear: PlateAnchor | null; front: PlateAnchor | null };
 }
 
 function prepareVehicle(
@@ -200,12 +203,27 @@ function prepareVehicle(
     }
   });
 
-  return { object: wrapper, size, wheelPositions };
+  // Plate mounting points: raycast into the body at bumper height (two
+  // heights in case the first passes through a gap), else bbox face.
+  const plateAt = (fromX: number): PlateAnchor | null =>
+    findPlateAnchor(object, { y: size.y * 0.3, fromX }) ??
+    findPlateAnchor(object, { y: size.y * 0.4, fromX }) ?? {
+      position: new THREE.Vector3(
+        Math.sign(fromX) * (size.x / 2),
+        size.y * 0.3,
+        0
+      ),
+      normal: new THREE.Vector3(Math.sign(fromX), 0, 0),
+    };
+  const plateAnchors = { rear: plateAt(-size.x), front: plateAt(size.x) };
+
+  return { object: wrapper, size, wheelPositions, plateAnchors };
 }
 
 export default function GlbVehicleModel({
   bodyType,
   color,
+  licensePlate,
   onZoneClick,
   hoveredZone,
   setHoveredZone,
@@ -213,7 +231,7 @@ export default function GlbVehicleModel({
   const root = useRef<THREE.Group>(null);
   const { scene } = useGLTF(MODEL_URL);
 
-  const { object, size, wheelPositions } = useMemo(
+  const { object, size, wheelPositions, plateAnchors } = useMemo(
     () => prepareVehicle(scene, bodyType, color),
     [scene, bodyType, color]
   );
@@ -254,9 +272,19 @@ export default function GlbVehicleModel({
     ? Math.max(...wheelPositions.map((p) => p.y))
     : H * 0.18;
 
+  const plateText = licensePlate?.trim();
+
   return (
     <group ref={root}>
       <primitive object={object} />
+
+      {/* user's license plate, rear + front */}
+      {plateText && plateAnchors.rear && (
+        <PlateMesh anchor={plateAnchors.rear} text={plateText} width={L * 0.11} />
+      )}
+      {plateText && plateAnchors.front && (
+        <PlateMesh anchor={plateAnchors.front} text={plateText} width={L * 0.11} />
+      )}
 
       {/* HOOD hit-box: front quarter, above beltline */}
       <mesh

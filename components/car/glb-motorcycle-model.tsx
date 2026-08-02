@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { useGLTF } from "@react-three/drei";
 import type { Zone } from "@/lib/types";
+import { findPlateAnchor, PlateMesh, type PlateAnchor } from "./license-plate";
 
 // Artist-made motorcycle: "Harley-Davidson Seventy-Two HD FXT 2015" by
 // Alex.Ka. (https://sketchfab.com/Alex.Ka.), CC-BY-4.0 — attribution shown in
@@ -17,6 +18,7 @@ const TARGET_LENGTH = 2.6; // world units nose→tail
 
 interface Props {
   color: string;
+  licensePlate?: string | null;
   onZoneClick?: (zone: Zone) => void;
   hoveredZone?: Zone | null;
   setHoveredZone?: (zone: Zone | null) => void;
@@ -26,6 +28,7 @@ interface Prepared {
   object: THREE.Group;
   size: THREE.Vector3; // bbox size after normalization (x = length)
   wheelAnchors: { position: THREE.Vector3; radius: number }[];
+  plateAnchor: PlateAnchor | null;
 }
 
 function prepareMotorcycle(scene: THREE.Group, color: string): Prepared {
@@ -135,11 +138,18 @@ function prepareMotorcycle(scene: THREE.Group, color: string): Prepared {
     );
   }
 
-  return { object: wrapper, size, wheelAnchors };
+  // Rear plate mount: raycast into the tail (hits the rear fender, so the
+  // plate tilts with the fender's surface normal like a real fender mount).
+  const plateAnchor =
+    findPlateAnchor(object, { y: size.y * 0.45, fromX: -size.x }) ??
+    findPlateAnchor(object, { y: size.y * 0.55, fromX: -size.x });
+
+  return { object: wrapper, size, wheelAnchors, plateAnchor };
 }
 
 export default function GlbMotorcycleModel({
   color,
+  licensePlate,
   onZoneClick,
   hoveredZone,
   setHoveredZone,
@@ -147,7 +157,7 @@ export default function GlbMotorcycleModel({
   const root = useRef<THREE.Group>(null);
   const { scene } = useGLTF(MODEL_URL);
 
-  const { object, size, wheelAnchors } = useMemo(
+  const { object, size, wheelAnchors, plateAnchor } = useMemo(
     () => prepareMotorcycle(scene, color),
     [scene, color]
   );
@@ -185,9 +195,16 @@ export default function GlbMotorcycleModel({
 
   const L = size.x, H = size.y, W = size.z;
 
+  const plateText = licensePlate?.trim();
+
   return (
     <group ref={root}>
       <primitive object={object} />
+
+      {/* user's license plate on the rear fender */}
+      {plateText && plateAnchor && (
+        <PlateMesh anchor={plateAnchor} text={plateText} width={L * 0.09} />
+      )}
 
       {/* ENGINE + TANK hit-box ("hood" zone): mid-bike, above the wheels */}
       <mesh position={[L * 0.05, H * 0.5, 0]} {...zoneHandlers("hood")}>

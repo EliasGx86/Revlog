@@ -124,6 +124,7 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
         <CarScene
           bodyType={vehicle.body_type}
           color={vehicle.color}
+          licensePlate={vehicle.license_plate}
           onZoneClick={handleZoneClick}
         />
       </div>
