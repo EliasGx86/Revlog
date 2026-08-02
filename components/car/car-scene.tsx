@@ -1,8 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Environment } from "@react-three/drei";
+import { useEffect, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
+import {
+  OrbitControls,
+  Environment,
+  ContactShadows,
+  MeshReflectorMaterial,
+} from "@react-three/drei";
 import CarModel from "./car-model";
 import type { BodyType, Zone } from "@/lib/types";
 
@@ -10,40 +15,86 @@ interface Props {
   bodyType: BodyType;
   color: string;
   onZoneClick: (zone: Zone) => void;
+  /** Dev-only: lets the /dev/models page read canvas pixels for snapshots. */
+  preserveBuffer?: boolean;
 }
 
-export default function CarScene({ bodyType, color, onZoneClick }: Props) {
+// Dev-only (mounted when preserveBuffer is set): lets tooling force a render
+// and grab pixels even when the tab isn't compositing (hidden pane = no rAF).
+function DevSnapHook() {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    (window as unknown as Record<string, unknown>).__snap = () => {
+      gl.render(scene, camera);
+      return gl.domElement.toDataURL("image/png");
+    };
+  }, [gl, scene, camera]);
+  return null;
+}
+
+export default function CarScene({ bodyType, color, onZoneClick, preserveBuffer }: Props) {
   const [hoveredZone, setHoveredZone] = useState<Zone | null>(null);
 
   return (
     <div className="relative h-full w-full">
       <Canvas
         shadows
-        camera={{ position: [6, 3.5, 6], fov: 35 }}
+        camera={{ position: [5.4, 2.4, 5.4], fov: 33 }}
         dpr={[1, 2]}
-        gl={{ antialias: true }}
+        gl={{ antialias: true, preserveDrawingBuffer: preserveBuffer }}
       >
-        <color attach="background" args={["#0a0a0b"]} />
-        <fog attach="fog" args={["#0a0a0b", 14, 28]} />
+        <color attach="background" args={["#08080a"]} />
+        <fog attach="fog" args={["#08080a", 13, 26]} />
 
-        {/* lighting */}
-        <ambientLight intensity={0.4} />
+        {/* showroom lighting: warm key, cool fill, overhead rim */}
+        <ambientLight intensity={0.25} />
         <directionalLight
-          position={[5, 8, 4]}
-          intensity={1.1}
+          position={[6, 7, 4]}
+          intensity={1.5}
+          color="#fff4e6"
           castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
         />
-        <directionalLight position={[-6, 5, -3]} intensity={0.4} color="#88aaff" />
+        <directionalLight position={[-6, 4, -4]} intensity={0.5} color="#88aaff" />
+        <spotLight
+          position={[0, 9, -5]}
+          intensity={220}
+          angle={0.55}
+          penumbra={1}
+          color="#ffffff"
+        />
 
         <Environment preset="city" />
 
-        {/* ground */}
-        <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
-          <planeGeometry args={[40, 40]} />
-          <meshStandardMaterial color="#0d0d10" roughness={1} />
+        {/* polished showroom floor */}
+        <mesh rotation-x={-Math.PI / 2} position={[0, -0.005, 0]}>
+          <circleGeometry args={[22, 48]} />
+          <MeshReflectorMaterial
+            color="#0b0b0e"
+            metalness={0.5}
+            roughness={0.75}
+            mirror={0.35}
+            resolution={512}
+            blur={[300, 80]}
+            mixBlur={0.9}
+            mixStrength={1.6}
+            depthScale={0.6}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.2}
+          />
         </mesh>
+
+        {/* soft grounding shadow under the vehicle */}
+        <ContactShadows
+          position={[0, 0.002, 0]}
+          opacity={0.6}
+          scale={13}
+          blur={2.4}
+          far={3.5}
+          resolution={512}
+          color="#000000"
+        />
 
         <CarModel
           bodyType={bodyType}
@@ -53,13 +104,15 @@ export default function CarScene({ bodyType, color, onZoneClick }: Props) {
           setHoveredZone={setHoveredZone}
         />
 
+        {preserveBuffer && <DevSnapHook />}
+
         <OrbitControls
           enablePan={false}
           enableZoom
-          minDistance={5}
+          minDistance={4.5}
           maxDistance={12}
           minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2.1}
+          maxPolarAngle={Math.PI / 2.15}
           autoRotate={false}
         />
       </Canvas>

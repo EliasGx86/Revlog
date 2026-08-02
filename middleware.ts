@@ -1,7 +1,8 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth", "/api/stripe/webhook"];
+// /dev pages 404 in production (see app/dev/*) but skip auth in development.
+const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth", "/api/stripe/webhook", "/dev", "/api/dev"];
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: { headers: req.headers } });

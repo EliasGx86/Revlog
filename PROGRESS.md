@@ -19,6 +19,7 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
 - **VIN + license plate**: optional onboarding fields, shown at a glance in the home header (plate badge, click-to-copy VIN). Migration `0002`.
 - **Photo OCR capture**: 📷 button on VIN/plate fields — take a picture, gpt-4o-mini vision extracts the text (`/api/vision/extract`). Strict VIN validation (17 chars, no I/O/Q).
 - **Motorcycles**: 4th body type with its own procedural 3D model (engine + wheels click zones; engine maps to the "hood" service zone).
+- **3D visual overhaul (pass 1)**: extruded side-profile silhouettes with real wheel arches, dark glass greenhouses, clearcoat paint, spoked wheels, mirrors/bumpers/lights, showroom lighting with contact shadows and reflective floor. Dev-only `/dev/models` viewer + snapshot API for iterating without auth.
 
 ### Not working yet — blockers to a usable app
 1. **`OPENAI_API_KEY` not set** — chat (the core feature) and photo OCR are dead until this is added in Vercel → Settings → Environment Variables (and `.env.local` for local dev).
@@ -39,4 +40,5 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next.
 
 ## Session log
 
+- **2026-08-02** — 3D overhaul pass 1: rewrote `car-model.tsx` (extruded silhouettes, arches, glass, clearcoat, detailed wheels) and `car-scene.tsx` (showroom lighting, ContactShadows, MeshReflectorMaterial floor). Added `/dev/models` dev viewer + `/api/dev/snapshot` for headless visual iteration.
 - **2026-08-01** — Reviewed dormant scaffold; deployed to Vercel (Pro) with GitHub auto-deploy; created Supabase project on upgraded Pro org and applied schema; renamed GarageIQ → RevLog; added VIN/plate tracking with photo OCR and motorcycle body type with 3D model. Made the app free for beta (payment step removed, subscription gate off), labeled all onboarding fields, and replaced the color picker with tap-friendly swatches. Added a curated make/model picker (6 CO-popular vehicles → mapped 3D body types) with a "request my make & model" button (new `vehicle_requests` table, migration 0003), plus a vehicle switcher and "+ Add vehicle" in the home header. Created BACKLOG.md.

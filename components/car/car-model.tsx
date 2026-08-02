@@ -1,12 +1,15 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
+import { RoundedBox } from "@react-three/drei";
 import type { BodyType, Zone } from "@/lib/types";
 
-// Stylized low-poly procedural car. Body type changes proportions.
-// Each interactive zone is a separate mesh group so we can attach hover/click handlers.
+// Stylized procedural vehicles. The body is an extruded side-profile silhouette
+// (real hood/windshield/roof slopes + wheel arches cut into the fenders) rather
+// than stacked boxes. Each interactive zone is its own mesh/group so hover and
+// click handlers attach cleanly.
 
 interface Props {
   bodyType: BodyType;
@@ -16,41 +19,173 @@ interface Props {
   setHoveredZone?: (zone: Zone | null) => void;
 }
 
-// Tunable proportions per body type (motorcycle has its own model below).
-const PROPORTIONS: Record<
-  Exclude<BodyType, "motorcycle">,
-  {
-    bodyLen: number; bodyWidth: number; bodyHeight: number;
-    cabinLen: number; cabinHeight: number; cabinForward: number;  // cabin position from center
-    hoodLen: number;
-    wheelRadius: number; wheelTrack: number; wheelbase: number;
-    rideHeight: number;
-    bedLen?: number; // truck only
-  }
-> = {
+const HIGHLIGHT = new THREE.Color("#ff5722");
+const BLACK = new THREE.Color("#000000");
+
+interface Profile {
+  width: number;
+  wheelRadius: number;
+  wheelX: number;      // ± wheelbase/2
+  bottomY: number;     // rocker height (bottom of body sides)
+  archR: number;       // wheel-arch cutout radius
+  // Side silhouette of the lower body only (stops at the beltline) so the
+  // glass greenhouse above it stays visible.
+  outline: [number, number][];
+  // Glass greenhouse silhouette (closed by a straight beltline).
+  glass: [number, number][];
+  hood: { front: [number, number]; rear: [number, number] };
+  roof: { front: [number, number]; rear: [number, number] }; // painted roof cap
+  mirror: [number, number]; // x,y of mirror mount
+  bed?: { x: number; len: number; y: number }; // truck bed interior
+}
+
+const PROFILES: Record<Exclude<BodyType, "motorcycle">, Profile> = {
   sedan: {
-    bodyLen: 4.6, bodyWidth: 1.8, bodyHeight: 0.55,
-    cabinLen: 2.2, cabinHeight: 0.85, cabinForward: -0.05,
-    hoodLen: 1.35,
-    wheelRadius: 0.36, wheelTrack: 1.55, wheelbase: 2.7,
-    rideHeight: 0.36,
+    width: 1.8, wheelRadius: 0.36, wheelX: 1.35, bottomY: 0.3, archR: 0.47,
+    outline: [
+      [2.3, 0.3], [2.38, 0.52], [2.33, 0.7], [1.1, 0.84],
+      [-1.55, 0.9], [-2.22, 0.86], [-2.36, 0.56], [-2.3, 0.3],
+    ],
+    glass: [[1.0, 0.86], [0.5, 1.28], [-0.58, 1.31], [-1.45, 0.9]],
+    hood: { front: [2.33, 0.7], rear: [1.1, 0.84] },
+    roof: { front: [0.5, 1.28], rear: [-0.58, 1.31] },
+    mirror: [0.95, 0.94],
   },
   suv: {
-    bodyLen: 4.7, bodyWidth: 1.95, bodyHeight: 0.65,
-    cabinLen: 2.6, cabinHeight: 1.1, cabinForward: 0.05,
-    hoodLen: 1.2,
-    wheelRadius: 0.42, wheelTrack: 1.65, wheelbase: 2.8,
-    rideHeight: 0.46,
+    width: 1.95, wheelRadius: 0.42, wheelX: 1.42, bottomY: 0.38, archR: 0.55,
+    outline: [
+      [2.35, 0.38], [2.43, 0.62], [2.38, 0.87], [1.15, 0.97],
+      [0.4, 1.02], [-2.2, 1.0], [-2.4, 0.62], [-2.35, 0.38],
+    ],
+    glass: [[1.08, 0.99], [0.64, 1.52], [-1.55, 1.55], [-2.1, 1.47], [-2.16, 0.99]],
+    hood: { front: [2.38, 0.87], rear: [1.15, 0.97] },
+    roof: { front: [0.64, 1.52], rear: [-1.55, 1.55] },
+    mirror: [1.0, 1.06],
   },
   truck: {
-    bodyLen: 5.4, bodyWidth: 1.95, bodyHeight: 0.6,
-    cabinLen: 1.7, cabinHeight: 1.05, cabinForward: -0.5,
-    hoodLen: 1.4,
-    wheelRadius: 0.45, wheelTrack: 1.7, wheelbase: 3.3,
-    rideHeight: 0.5,
-    bedLen: 1.9,
+    width: 1.95, wheelRadius: 0.45, wheelX: 1.7, bottomY: 0.42, archR: 0.59,
+    outline: [
+      [2.7, 0.42], [2.78, 0.68], [2.73, 0.97], [1.35, 1.05],
+      [0.6, 1.12], [-2.58, 1.08], [-2.68, 0.96], [-2.73, 0.68], [-2.66, 0.42],
+    ],
+    glass: [[1.28, 1.09], [0.9, 1.6], [-0.12, 1.62], [-0.36, 1.09]],
+    hood: { front: [2.73, 0.97], rear: [1.35, 1.05] },
+    roof: { front: [0.9, 1.6], rear: [-0.12, 1.62] },
+    mirror: [1.22, 1.16],
+    bed: { x: -1.5, len: 2.0, y: 1.13 },
   },
 };
+
+// Extruded silhouette with wheel arches cut out of the bottom edge.
+function useBodyGeometry(p: Profile) {
+  return useMemo(() => {
+    const s = new THREE.Shape();
+    const [x0, y0] = p.outline[0];
+    s.moveTo(x0, y0);
+    for (let i = 1; i < p.outline.length; i++) s.lineTo(p.outline[i][0], p.outline[i][1]);
+    // bottom edge, rear → front, arching over each wheel
+    const rear = -p.wheelX, front = p.wheelX;
+    s.lineTo(rear - p.archR, p.bottomY);
+    s.absarc(rear, p.bottomY, p.archR, Math.PI, 0, true);
+    s.lineTo(front - p.archR, p.bottomY);
+    s.absarc(front, p.bottomY, p.archR, Math.PI, 0, true);
+    s.closePath();
+
+    const depth = p.width - 0.18;
+    const geo = new THREE.ExtrudeGeometry(s, {
+      depth,
+      bevelEnabled: true,
+      bevelThickness: 0.06,
+      bevelSize: 0.07,
+      bevelSegments: 3,
+      curveSegments: 14,
+    });
+    geo.translate(0, 0, -depth / 2);
+    return geo;
+  }, [p]);
+}
+
+function useGlassGeometry(p: Profile) {
+  return useMemo(() => {
+    const s = new THREE.Shape();
+    const [x0, y0] = p.glass[0];
+    s.moveTo(x0, y0);
+    for (let i = 1; i < p.glass.length; i++) s.lineTo(p.glass[i][0], p.glass[i][1]);
+    s.closePath();
+    const depth = p.width - 0.5;
+    const geo = new THREE.ExtrudeGeometry(s, {
+      depth,
+      bevelEnabled: true,
+      bevelThickness: 0.03,
+      bevelSize: 0.03,
+      bevelSegments: 2,
+      curveSegments: 8,
+    });
+    geo.translate(0, 0, -depth / 2);
+    return geo;
+  }, [p]);
+}
+
+function zoneHandlers(
+  zone: Zone,
+  onZoneClick?: (z: Zone) => void,
+  setHoveredZone?: (z: Zone | null) => void
+) {
+  return {
+    onClick: (e: { stopPropagation: () => void }) => {
+      e.stopPropagation();
+      onZoneClick?.(zone);
+    },
+    onPointerOver: (e: { stopPropagation: () => void }) => {
+      e.stopPropagation();
+      setHoveredZone?.(zone);
+      document.body.style.cursor = "pointer";
+    },
+    onPointerOut: () => {
+      setHoveredZone?.(null);
+      document.body.style.cursor = "auto";
+    },
+  };
+}
+
+// Torus tire + dished rim with spokes.
+function Wheel({ r, highlight }: { r: number; highlight: boolean }) {
+  return (
+    <group>
+      <mesh castShadow>
+        <torusGeometry args={[r * 0.7, r * 0.32, 14, 28]} />
+        <meshStandardMaterial color="#0c0c0e" roughness={0.94} />
+      </mesh>
+      {/* rim barrel */}
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[r * 0.56, r * 0.56, r * 0.42, 20]} />
+        <meshStandardMaterial
+          color="#b9bbc0"
+          metalness={0.9}
+          roughness={0.18}
+          emissive={highlight ? HIGHLIGHT : BLACK}
+          emissiveIntensity={highlight ? 0.45 : 0}
+        />
+      </mesh>
+      {/* spokes, both faces */}
+      {[r * 0.24, -r * 0.24].map((z, side) =>
+        [0, 1, 2, 3, 4].map((i) => (
+          <group key={`${side}-${i}`} rotation={[0, 0, (i * Math.PI * 2) / 5]}>
+            <mesh position={[r * 0.28, 0, z]}>
+              <boxGeometry args={[r * 0.55, r * 0.13, r * 0.07]} />
+              <meshStandardMaterial color="#d2d4d8" metalness={0.85} roughness={0.25} />
+            </mesh>
+          </group>
+        ))
+      )}
+      {/* hub */}
+      <mesh>
+        <sphereGeometry args={[r * 0.14, 12, 12]} />
+        <meshStandardMaterial color="#8e9094" metalness={0.9} roughness={0.3} />
+      </mesh>
+    </group>
+  );
+}
 
 export default function CarModel(props: Props) {
   if (props.bodyType === "motorcycle") return <MotorcycleModel {...props} />;
@@ -65,206 +200,196 @@ function FourWheelModel({
   setHoveredZone,
 }: Props) {
   const root = useRef<THREE.Group>(null);
-  const p = PROPORTIONS[bodyType as Exclude<BodyType, "motorcycle">];
+  const p = PROFILES[bodyType as Exclude<BodyType, "motorcycle">];
+  const bodyGeo = useBodyGeometry(p);
+  const glassGeo = useGlassGeometry(p);
 
   useFrame((_, dt) => {
-    // Gentle idle rotation when nothing is hovered.
     if (root.current && !hoveredZone) {
       root.current.rotation.y += dt * 0.15;
     }
   });
 
-  const bodyColor = new THREE.Color(color);
-  const darkTrim = new THREE.Color("#1a1a1d");
-  const glass = new THREE.Color("#5b6f7c");
-  const tire = new THREE.Color("#0e0e10");
-  const rim = new THREE.Color("#9a9a9f");
+  const bodyColor = useMemo(() => new THREE.Color(color), [color]);
+  const halfW = p.width / 2;
 
-  const halfLen = p.bodyLen / 2;
+  // Hood overlay panel: sits just above the hood slope, tinted like the body,
+  // lights up on hover. Angle derived from the profile's hood segment.
+  const [hf, hr] = [p.hood.front, p.hood.rear];
+  const hoodLen = Math.hypot(hf[0] - hr[0], hf[1] - hr[1]) - 0.12;
+  const hoodAngle = Math.atan2(hf[1] - hr[1], hf[0] - hr[0]);
+  const hoodMid: [number, number] = [(hf[0] + hr[0]) / 2, (hf[1] + hr[1]) / 2 + 0.055];
 
-  // Highlight color for hovered zone
-  const zoneEmissive = (zone: Zone) =>
-    hoveredZone === zone ? new THREE.Color("#ff5722") : new THREE.Color("#000000");
+  // Painted roof cap over the glass greenhouse.
+  const [rf, rr] = [p.roof.front, p.roof.rear];
+  const roofLen = Math.hypot(rf[0] - rr[0], rf[1] - rr[1]) - 0.02;
+  const roofAngle = Math.atan2(rf[1] - rr[1], rf[0] - rr[0]);
+  const roofMid: [number, number] = [(rf[0] + rr[0]) / 2, (rf[1] + rr[1]) / 2 + 0.005];
+
+  const paint = (zone?: Zone) => (
+    <meshPhysicalMaterial
+      color={bodyColor}
+      metalness={0.85}
+      roughness={0.28}
+      clearcoat={1}
+      clearcoatRoughness={0.12}
+      envMapIntensity={1.1}
+      emissive={zone && hoveredZone === zone ? HIGHLIGHT : BLACK}
+      emissiveIntensity={zone && hoveredZone === zone ? 0.35 : 0}
+    />
+  );
 
   return (
-    <group ref={root} position={[0, 0, 0]}>
-      {/* ground shadow */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.001, 0]} receiveShadow>
-        <circleGeometry args={[3.2, 32]} />
-        <meshBasicMaterial color="#000" transparent opacity={0.25} />
+    <group ref={root}>
+      {/* body silhouette */}
+      <mesh geometry={bodyGeo} castShadow receiveShadow>
+        {paint()}
       </mesh>
 
-      {/* main body shell (chassis, fenders) */}
+      {/* glass greenhouse — clickable as the WINDSHIELD zone */}
       <mesh
-        position={[0, p.rideHeight + p.bodyHeight / 2, 0]}
+        geometry={glassGeo}
         castShadow
-        receiveShadow
+        {...zoneHandlers("windshield", onZoneClick, setHoveredZone)}
       >
-        <boxGeometry args={[p.bodyLen, p.bodyHeight, p.bodyWidth]} />
-        <meshStandardMaterial color={bodyColor} metalness={0.55} roughness={0.35} />
+        <meshPhysicalMaterial
+          color="#25333c"
+          metalness={0.2}
+          roughness={0.06}
+          transparent
+          opacity={0.9}
+          envMapIntensity={1.6}
+          emissive={hoveredZone === "windshield" ? HIGHLIGHT : BLACK}
+          emissiveIntensity={hoveredZone === "windshield" ? 0.4 : 0}
+        />
       </mesh>
 
-      {/* HOOD ZONE (front of car) */}
-      <group
-        onClick={(e) => {
-          e.stopPropagation();
-          onZoneClick?.("hood");
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          setHoveredZone?.("hood");
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHoveredZone?.(null);
-          document.body.style.cursor = "auto";
-        }}
+      {/* roof cap */}
+      <mesh
+        position={[roofMid[0], roofMid[1], 0]}
+        rotation={[0, 0, roofAngle]}
+        castShadow
       >
+        <boxGeometry args={[roofLen, 0.06, p.width - 0.52]} />
+        {paint()}
+      </mesh>
+
+      {/* HOOD zone overlay */}
+      <group {...zoneHandlers("hood", onZoneClick, setHoveredZone)}>
         <mesh
-          position={[
-            halfLen - p.hoodLen / 2,
-            p.rideHeight + p.bodyHeight + 0.06,
-            0,
-          ]}
+          position={[hoodMid[0], hoodMid[1], 0]}
+          rotation={[0, 0, hoodAngle]}
           castShadow
         >
-          <boxGeometry args={[p.hoodLen, 0.12, p.bodyWidth - 0.05]} />
-          <meshStandardMaterial
-            color={bodyColor}
-            metalness={0.55}
-            roughness={0.35}
-            emissive={zoneEmissive("hood")}
-            emissiveIntensity={hoveredZone === "hood" ? 0.35 : 0}
-          />
+          <boxGeometry args={[hoodLen, 0.05, p.width - 0.55]} />
+          {paint("hood")}
         </mesh>
-        {/* grille / front fascia */}
-        <mesh
-          position={[halfLen - 0.02, p.rideHeight + p.bodyHeight / 2, 0]}
-          castShadow
+        {/* grille */}
+        <RoundedBox
+          args={[0.09, 0.26, p.width - 0.75]}
+          radius={0.03}
+          position={[p.outline[1][0] + 0.015, p.outline[1][1] + 0.1, 0]}
         >
-          <boxGeometry args={[0.08, p.bodyHeight - 0.1, p.bodyWidth - 0.2]} />
-          <meshStandardMaterial color={darkTrim} metalness={0.4} roughness={0.6} />
-        </mesh>
+          <meshStandardMaterial color="#141417" metalness={0.5} roughness={0.5} />
+        </RoundedBox>
         {/* headlights */}
-        <mesh position={[halfLen - 0.02, p.rideHeight + p.bodyHeight - 0.1, p.bodyWidth / 2 - 0.25]}>
-          <boxGeometry args={[0.06, 0.12, 0.25]} />
-          <meshStandardMaterial color="#fff8d8" emissive="#fff8d8" emissiveIntensity={0.6} />
-        </mesh>
-        <mesh position={[halfLen - 0.02, p.rideHeight + p.bodyHeight - 0.1, -p.bodyWidth / 2 + 0.25]}>
-          <boxGeometry args={[0.06, 0.12, 0.25]} />
-          <meshStandardMaterial color="#fff8d8" emissive="#fff8d8" emissiveIntensity={0.6} />
-        </mesh>
+        {[halfW - 0.32, -(halfW - 0.32)].map((z, i) => (
+          <mesh key={i} position={[p.outline[1][0] + 0.02, p.outline[1][1] + 0.24, z]}>
+            <boxGeometry args={[0.06, 0.09, 0.3]} />
+            <meshStandardMaterial color="#fff6d8" emissive="#ffedb0" emissiveIntensity={1.6} toneMapped={false} />
+          </mesh>
+        ))}
       </group>
 
-      {/* CABIN (with WINDSHIELD ZONE on the front-facing glass) */}
-      <group
-        position={[
-          p.cabinForward,
-          p.rideHeight + p.bodyHeight + p.cabinHeight / 2,
-          0,
-        ]}
+      {/* front & rear bumpers */}
+      <RoundedBox
+        args={[0.22, 0.3, p.width - 0.2]}
+        radius={0.06}
+        position={[p.outline[0][0] + 0.02, p.outline[0][1] + 0.12, 0]}
+        castShadow
       >
-        <mesh castShadow>
-          <boxGeometry args={[p.cabinLen, p.cabinHeight, p.bodyWidth - 0.15]} />
-          <meshStandardMaterial color={bodyColor} metalness={0.55} roughness={0.35} />
-        </mesh>
-        {/* windshield (front-facing glass slab — clickable) */}
-        <mesh
-          position={[p.cabinLen / 2 - 0.001, 0, 0]}
-          rotation={[0, 0, -0.25]}
-          onClick={(e) => {
-            e.stopPropagation();
-            onZoneClick?.("windshield");
-          }}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHoveredZone?.("windshield");
-            document.body.style.cursor = "pointer";
-          }}
-          onPointerOut={() => {
-            setHoveredZone?.(null);
-            document.body.style.cursor = "auto";
-          }}
-        >
-          <boxGeometry args={[0.05, p.cabinHeight - 0.15, p.bodyWidth - 0.3]} />
-          <meshStandardMaterial
-            color={glass}
-            metalness={0.2}
-            roughness={0.05}
-            transparent
-            opacity={0.55}
-            emissive={zoneEmissive("windshield")}
-            emissiveIntensity={hoveredZone === "windshield" ? 0.5 : 0}
-          />
-        </mesh>
-        {/* rear window */}
-        <mesh position={[-p.cabinLen / 2 + 0.001, 0, 0]} rotation={[0, 0, 0.25]}>
-          <boxGeometry args={[0.05, p.cabinHeight - 0.2, p.bodyWidth - 0.35]} />
-          <meshStandardMaterial color={glass} metalness={0.2} roughness={0.05} transparent opacity={0.45} />
-        </mesh>
-        {/* side windows */}
-        <mesh position={[0, 0.05, p.bodyWidth / 2 - 0.075]}>
-          <boxGeometry args={[p.cabinLen - 0.4, p.cabinHeight - 0.35, 0.04]} />
-          <meshStandardMaterial color={glass} metalness={0.2} roughness={0.05} transparent opacity={0.5} />
-        </mesh>
-        <mesh position={[0, 0.05, -(p.bodyWidth / 2 - 0.075)]}>
-          <boxGeometry args={[p.cabinLen - 0.4, p.cabinHeight - 0.35, 0.04]} />
-          <meshStandardMaterial color={glass} metalness={0.2} roughness={0.05} transparent opacity={0.5} />
-        </mesh>
-      </group>
+        <meshStandardMaterial color="#1b1b1f" metalness={0.4} roughness={0.6} />
+      </RoundedBox>
+      <RoundedBox
+        args={[0.2, 0.28, p.width - 0.2]}
+        radius={0.06}
+        position={[p.outline[p.outline.length - 1][0] - 0.04, p.outline[p.outline.length - 1][1] + 0.12, 0]}
+        castShadow
+      >
+        <meshStandardMaterial color="#1b1b1f" metalness={0.4} roughness={0.6} />
+      </RoundedBox>
 
-      {/* Truck bed */}
-      {bodyType === "truck" && p.bedLen && (
-        <group position={[-halfLen + p.bedLen / 2 + 0.1, p.rideHeight + p.bodyHeight + 0.1, 0]}>
-          <mesh castShadow>
-            <boxGeometry args={[p.bedLen, 0.5, p.bodyWidth - 0.05]} />
-            <meshStandardMaterial color={bodyColor} metalness={0.55} roughness={0.35} />
+      {/* tail lights */}
+      {[halfW - 0.3, -(halfW - 0.3)].map((z, i) => (
+        <mesh
+          key={i}
+          position={[p.outline[p.outline.length - 2][0] - 0.02, p.outline[p.outline.length - 2][1] + 0.28, z]}
+        >
+          <boxGeometry args={[0.05, 0.1, 0.28]} />
+          <meshStandardMaterial color="#ff3b30" emissive="#c1170e" emissiveIntensity={1.3} toneMapped={false} />
+        </mesh>
+      ))}
+
+      {/* license plate */}
+      <mesh position={[p.outline[p.outline.length - 2][0] - 0.06, p.outline[p.outline.length - 2][1] + 0.08, 0]}>
+        <boxGeometry args={[0.02, 0.16, 0.5]} />
+        <meshStandardMaterial color="#e8e8e2" roughness={0.6} />
+      </mesh>
+
+      {/* side mirrors */}
+      {[halfW + 0.1, -(halfW + 0.1)].map((z, i) => (
+        <group key={i} position={[p.mirror[0], p.mirror[1], z]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.2, 8]} />
+            <meshStandardMaterial color="#1b1b1f" roughness={0.6} />
           </mesh>
-          <mesh position={[0, 0.05, 0]}>
-            <boxGeometry args={[p.bedLen - 0.1, 0.05, p.bodyWidth - 0.2]} />
-            <meshStandardMaterial color="#222" />
-          </mesh>
+          <RoundedBox args={[0.1, 0.14, 0.06]} radius={0.02} position={[0, 0.04, z > 0 ? 0.06 : -0.06]}>
+            {paint()}
+          </RoundedBox>
         </group>
+      ))}
+
+      {/* shark-fin antenna */}
+      <mesh position={[-0.9, p.outline[5][1] + 0.03, 0]} rotation={[0, 0, 0.5]}>
+        <coneGeometry args={[0.05, 0.16, 8]} />
+        <meshStandardMaterial color="#141417" roughness={0.5} />
+      </mesh>
+
+      {/* truck bed interior */}
+      {p.bed && (
+        <>
+          {/* bed floor, proud of the rails so it reads from above */}
+          <mesh position={[p.bed.x, p.bed.y, 0]}>
+            <boxGeometry args={[p.bed.len, 0.12, p.width - 0.45]} />
+            <meshStandardMaterial color="#141417" roughness={0.92} />
+          </mesh>
+          {/* tailgate cap */}
+          <mesh position={[p.bed.x - p.bed.len / 2 - 0.08, p.bed.y + 0.05, 0]}>
+            <boxGeometry args={[0.06, 0.05, p.width - 0.45]} />
+            <meshStandardMaterial color="#141417" roughness={0.92} />
+          </mesh>
+        </>
       )}
 
-      {/* WHEELS ZONE — all four wheels grouped, single click target */}
-      <group
-        onClick={(e) => {
-          e.stopPropagation();
-          onZoneClick?.("wheels");
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          setHoveredZone?.("wheels");
-          document.body.style.cursor = "pointer";
-        }}
-        onPointerOut={() => {
-          setHoveredZone?.(null);
-          document.body.style.cursor = "auto";
-        }}
+      {/* exhaust */}
+      <mesh
+        position={[-p.outline[0][0] - 0.02, p.bottomY - 0.02, halfW - 0.35]}
+        rotation={[0, 0, Math.PI / 2]}
       >
+        <cylinderGeometry args={[0.05, 0.06, 0.18, 12]} />
+        <meshStandardMaterial color="#8e9094" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* WHEELS zone */}
+      <group {...zoneHandlers("wheels", onZoneClick, setHoveredZone)}>
         {[
-          [p.wheelbase / 2,  p.wheelTrack / 2],
-          [p.wheelbase / 2, -p.wheelTrack / 2],
-          [-p.wheelbase / 2, p.wheelTrack / 2],
-          [-p.wheelbase / 2, -p.wheelTrack / 2],
+          [p.wheelX, halfW - 0.12],
+          [p.wheelX, -(halfW - 0.12)],
+          [-p.wheelX, halfW - 0.12],
+          [-p.wheelX, -(halfW - 0.12)],
         ].map(([x, z], i) => (
           <group key={i} position={[x, p.wheelRadius, z]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <cylinderGeometry args={[p.wheelRadius, p.wheelRadius, 0.32, 24]} />
-              <meshStandardMaterial color={tire} roughness={0.95} />
-            </mesh>
-            {/* rim */}
-            <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-              <cylinderGeometry args={[p.wheelRadius * 0.55, p.wheelRadius * 0.55, 0.34, 16]} />
-              <meshStandardMaterial
-                color={rim}
-                metalness={0.8}
-                roughness={0.25}
-                emissive={zoneEmissive("wheels")}
-                emissiveIntensity={hoveredZone === "wheels" ? 0.4 : 0}
-              />
-            </mesh>
+            <Wheel r={p.wheelRadius} highlight={hoveredZone === "wheels"} />
           </group>
         ))}
       </group>
@@ -272,7 +397,7 @@ function FourWheelModel({
   );
 }
 
-// Stylized low-poly motorcycle. Zones: "hood" = engine/tank, "wheels" = both wheels.
+// Stylized motorcycle. Zones: "hood" = engine/tank, "wheels" = both wheels.
 function MotorcycleModel({ color, onZoneClick, hoveredZone, setHoveredZone }: Props) {
   const root = useRef<THREE.Group>(null);
 
@@ -282,132 +407,117 @@ function MotorcycleModel({ color, onZoneClick, hoveredZone, setHoveredZone }: Pr
     }
   });
 
-  const bodyColor = new THREE.Color(color);
-  const darkTrim = new THREE.Color("#1a1a1d");
-  const engineMetal = new THREE.Color("#6b6b72");
-  const tire = new THREE.Color("#0e0e10");
-  const rim = new THREE.Color("#9a9a9f");
+  const bodyColor = useMemo(() => new THREE.Color(color), [color]);
+  const wheelR = 0.5;
 
-  const wheelRadius = 0.5;
-  const zoneEmissive = (zone: Zone) =>
-    hoveredZone === zone ? new THREE.Color("#ff5722") : new THREE.Color("#000000");
-
-  const zoneHandlers = (zone: Zone) => ({
-    onClick: (e: { stopPropagation: () => void }) => {
-      e.stopPropagation();
-      onZoneClick?.(zone);
-    },
-    onPointerOver: (e: { stopPropagation: () => void }) => {
-      e.stopPropagation();
-      setHoveredZone?.(zone);
-      document.body.style.cursor = "pointer";
-    },
-    onPointerOut: () => {
-      setHoveredZone?.(null);
-      document.body.style.cursor = "auto";
-    },
-  });
+  const hoodHot = hoveredZone === "hood";
+  const wheelsHot = hoveredZone === "wheels";
 
   return (
-    <group ref={root} position={[0, 0, 0]}>
-      {/* ground shadow */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.001, 0]} receiveShadow>
-        <circleGeometry args={[2.2, 32]} />
-        <meshBasicMaterial color="#000" transparent opacity={0.25} />
-      </mesh>
-
+    <group ref={root}>
       {/* frame spine */}
       <mesh position={[0, 0.85, 0]} rotation={[0, 0, -0.08]} castShadow>
-        <boxGeometry args={[1.9, 0.14, 0.16]} />
-        <meshStandardMaterial color={darkTrim} metalness={0.5} roughness={0.5} />
+        <boxGeometry args={[1.9, 0.13, 0.15]} />
+        <meshStandardMaterial color="#17171a" metalness={0.5} roughness={0.5} />
       </mesh>
 
-      {/* ENGINE + TANK ZONE (maps to "hood") */}
-      <group {...zoneHandlers("hood")}>
-        {/* engine block */}
-        <mesh position={[0.1, 0.6, 0]} castShadow>
-          <boxGeometry args={[0.75, 0.5, 0.42]} />
+      {/* ENGINE + TANK ZONE */}
+      <group {...zoneHandlers("hood", onZoneClick, setHoveredZone)}>
+        <RoundedBox args={[0.75, 0.5, 0.42]} radius={0.06} position={[0.1, 0.6, 0]} castShadow>
           <meshStandardMaterial
-            color={engineMetal}
-            metalness={0.85}
-            roughness={0.3}
-            emissive={zoneEmissive("hood")}
-            emissiveIntensity={hoveredZone === "hood" ? 0.35 : 0}
+            color="#75757c"
+            metalness={0.9}
+            roughness={0.25}
+            emissive={hoodHot ? HIGHLIGHT : BLACK}
+            emissiveIntensity={hoodHot ? 0.35 : 0}
           />
-        </mesh>
+        </RoundedBox>
         {/* cylinder fins */}
-        <mesh position={[0.1, 0.9, 0]} castShadow>
-          <boxGeometry args={[0.4, 0.14, 0.5]} />
-          <meshStandardMaterial color={darkTrim} metalness={0.6} roughness={0.4} />
-        </mesh>
-        {/* fuel tank */}
-        <mesh position={[0.42, 1.08, 0]} rotation={[0, 0, -0.12]} castShadow>
-          <boxGeometry args={[0.8, 0.32, 0.48]} />
-          <meshStandardMaterial
+        {[0, 1, 2].map((i) => (
+          <mesh key={i} position={[0.1, 0.86 + i * 0.055, 0]} castShadow>
+            <boxGeometry args={[0.42 - i * 0.03, 0.03, 0.5]} />
+            <meshStandardMaterial color="#232327" metalness={0.7} roughness={0.35} />
+          </mesh>
+        ))}
+        {/* fuel tank — capsule reads far rounder than a box */}
+        <mesh position={[0.45, 1.1, 0]} rotation={[0, 0, Math.PI / 2 - 0.12]} castShadow>
+          <capsuleGeometry args={[0.21, 0.5, 8, 16]} />
+          <meshPhysicalMaterial
             color={bodyColor}
-            metalness={0.55}
-            roughness={0.35}
-            emissive={zoneEmissive("hood")}
-            emissiveIntensity={hoveredZone === "hood" ? 0.35 : 0}
+            metalness={0.85}
+            roughness={0.25}
+            clearcoat={1}
+            clearcoatRoughness={0.1}
+            emissive={hoodHot ? HIGHLIGHT : BLACK}
+            emissiveIntensity={hoodHot ? 0.35 : 0}
           />
         </mesh>
       </group>
 
       {/* seat */}
-      <mesh position={[-0.45, 1.02, 0]} castShadow>
-        <boxGeometry args={[0.85, 0.16, 0.42]} />
-        <meshStandardMaterial color={darkTrim} roughness={0.9} />
-      </mesh>
+      <RoundedBox args={[0.85, 0.15, 0.4]} radius={0.05} position={[-0.45, 1.02, 0]} castShadow>
+        <meshStandardMaterial color="#131316" roughness={0.92} />
+      </RoundedBox>
       {/* tail cowl */}
-      <mesh position={[-0.95, 1.1, 0]} rotation={[0, 0, 0.25]} castShadow>
-        <boxGeometry args={[0.45, 0.2, 0.4]} />
-        <meshStandardMaterial color={bodyColor} metalness={0.55} roughness={0.35} />
-      </mesh>
+      <RoundedBox args={[0.45, 0.2, 0.38]} radius={0.07} position={[-0.95, 1.1, 0]} rotation={[0, 0, 0.25]} castShadow>
+        <meshPhysicalMaterial color={bodyColor} metalness={0.85} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+      </RoundedBox>
       {/* rear swingarm */}
       <mesh position={[-0.75, 0.5, 0]} rotation={[0, 0, 0.1]} castShadow>
-        <boxGeometry args={[0.9, 0.1, 0.14]} />
-        <meshStandardMaterial color={darkTrim} metalness={0.5} roughness={0.5} />
+        <boxGeometry args={[0.9, 0.09, 0.13]} />
+        <meshStandardMaterial color="#17171a" metalness={0.5} roughness={0.5} />
       </mesh>
 
       {/* front fork */}
-      {[0.13, -0.13].map((z, i) => (
+      {[0.12, -0.12].map((z, i) => (
         <mesh key={i} position={[1.0, 0.85, z]} rotation={[0, 0, -0.42]} castShadow>
-          <cylinderGeometry args={[0.035, 0.035, 0.85, 12]} />
-          <meshStandardMaterial color={rim} metalness={0.85} roughness={0.2} />
+          <cylinderGeometry args={[0.032, 0.032, 0.85, 12]} />
+          <meshStandardMaterial color="#c0c2c6" metalness={0.9} roughness={0.15} />
         </mesh>
       ))}
       {/* handlebar */}
       <mesh position={[0.82, 1.32, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.03, 0.03, 0.72, 12]} />
-        <meshStandardMaterial color={darkTrim} metalness={0.6} roughness={0.4} />
+        <cylinderGeometry args={[0.028, 0.028, 0.72, 12]} />
+        <meshStandardMaterial color="#17171a" metalness={0.6} roughness={0.4} />
       </mesh>
       {/* headlight */}
       <mesh position={[1.05, 1.12, 0]}>
-        <sphereGeometry args={[0.11, 16, 16]} />
-        <meshStandardMaterial color="#fff8d8" emissive="#fff8d8" emissiveIntensity={0.6} />
+        <sphereGeometry args={[0.1, 16, 16]} />
+        <meshStandardMaterial color="#fff6d8" emissive="#ffedb0" emissiveIntensity={1.6} toneMapped={false} />
       </mesh>
       {/* exhaust */}
       <mesh position={[-0.55, 0.42, 0.24]} rotation={[0, 0, Math.PI / 2]} castShadow>
-        <cylinderGeometry args={[0.055, 0.07, 1.1, 12]} />
-        <meshStandardMaterial color={rim} metalness={0.9} roughness={0.15} />
+        <cylinderGeometry args={[0.05, 0.068, 1.1, 12]} />
+        <meshStandardMaterial color="#c0c2c6" metalness={0.95} roughness={0.12} />
       </mesh>
 
-      {/* WHEELS ZONE — front and rear */}
-      <group {...zoneHandlers("wheels")}>
+      {/* fenders — half-torus hugging each wheel */}
+      {[
+        { x: 1.15, y: wheelR, rot: 0.25 },
+        { x: -1.15, y: wheelR, rot: -0.35 },
+      ].map((f, i) => (
+        <mesh key={i} position={[f.x, f.y, 0]} rotation={[0, 0, f.rot]} castShadow>
+          <torusGeometry args={[wheelR + 0.1, 0.045, 10, 20, Math.PI * 0.85]} />
+          <meshPhysicalMaterial color={bodyColor} metalness={0.85} roughness={0.25} clearcoat={1} clearcoatRoughness={0.1} />
+        </mesh>
+      ))}
+
+      {/* WHEELS zone */}
+      <group {...zoneHandlers("wheels", onZoneClick, setHoveredZone)}>
         {[1.15, -1.15].map((x, i) => (
-          <group key={i} position={[x, wheelRadius, 0]}>
-            <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-              <cylinderGeometry args={[wheelRadius, wheelRadius, 0.22, 24]} />
-              <meshStandardMaterial color={tire} roughness={0.95} />
+          <group key={i} position={[x, wheelR, 0]}>
+            <mesh castShadow>
+              <torusGeometry args={[wheelR * 0.72, wheelR * 0.28, 14, 28]} />
+              <meshStandardMaterial color="#0c0c0e" roughness={0.94} />
             </mesh>
             <mesh rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[wheelRadius * 0.5, wheelRadius * 0.5, 0.24, 16]} />
+              <cylinderGeometry args={[wheelR * 0.5, wheelR * 0.5, 0.2, 20]} />
               <meshStandardMaterial
-                color={rim}
-                metalness={0.8}
-                roughness={0.25}
-                emissive={zoneEmissive("wheels")}
-                emissiveIntensity={hoveredZone === "wheels" ? 0.4 : 0}
+                color="#b9bbc0"
+                metalness={0.9}
+                roughness={0.18}
+                emissive={wheelsHot ? HIGHLIGHT : BLACK}
+                emissiveIntensity={wheelsHot ? 0.45 : 0}
               />
             </mesh>
           </group>

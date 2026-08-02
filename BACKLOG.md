@@ -6,21 +6,22 @@ for "where we are"; this file is "what's next and why."
 ## P1 — makes or breaks the beta experience
 
 ### 3D model visual overhaul
-The procedural primitive models (boxes + cylinders) read as programmer art. Plan:
+~~Pass 1 (done 2026-08-02):~~ procedural models rebuilt — extruded side-profile
+silhouettes with wheel arches, dark glass greenhouses, clearcoat paint, detailed
+wheels, showroom lighting/shadows/reflective floor. Iterate with the `/dev/models`
+viewer (snapshots land in `.dev-snapshots/`).
 
-1. **Short term (recommended next step):** swap the primitives for real low-poly
-   stylized GLB models — one per body type (sedan, truck, SUV, motorcycle), sourced
-   from CC0/low-cost packs (Poly Pizza, Sketchfab, Kenney car kit). Recolor the body
-   material at runtime to the user's chosen color. Keep the existing prop interface
-   (`car-model.tsx` was designed to be swapped) and use invisible hit-box meshes for
-   the hood/wheels/windshield click zones so nothing else changes. Add soft-shadow
-   ground, better HDR environment, subtle bloom — lighting is half the perceived
-   quality.
-2. **Medium term:** per-make/model GLBs for the catalog vehicles (Chevy Colorado
-   first). The `vehicle_requests` table tells us exactly which models to buy/commission
-   next — prioritize by request count.
-3. **Not recommended:** photoreal models or runtime-generated meshes — heavy, slow
-   on mobile, and stylized-consistent beats realistic-inconsistent.
+Next levels:
+1. **Per-body-type GLB swap (when procedural hits its ceiling):** low-poly stylized
+   GLB models from CC0/low-cost packs (Poly Pizza, Sketchfab, Kenney car kit),
+   runtime-tinted body material, invisible hit-boxes for the click zones.
+2. **Per-make/model variants for the catalog** (Chevy Colorado first) — procedural
+   proportion presets per catalog entry, or GLBs. The `vehicle_requests` table
+   ranks what to build next.
+3. **Not recommended:** photoreal models — heavy on mobile; stylized-consistent
+   beats realistic-inconsistent.
+4. Perf check on mobile: MeshReflectorMaterial adds a render pass — if low-end
+   phones struggle, gate it behind a quality toggle.
 
 ### Make/model catalog expansion
 Beta ships with 6 curated vehicles (CO-popular first guess: Colorado, F-150,
