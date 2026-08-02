@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildReminderNote } from "@/lib/reminders";
 
 const Schema = z.object({
   logId: z.string().uuid(),
@@ -43,5 +44,9 @@ export async function POST(req: Request) {
       .eq("user_id", user.id);
   }
 
-  return NextResponse.json({ ok: true });
+  // A fresh odometer reading is the best moment to check what's now due.
+  const effectiveMileage = Math.max(body.mileage, vehicle?.current_mileage ?? 0);
+  const reminder = await buildReminderNote(supabase, body.vehicleId, effectiveMileage);
+
+  return NextResponse.json({ ok: true, reminder });
 }

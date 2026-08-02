@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOpenAI, CHAT_MODEL } from "@/lib/openai";
 import { SERVICE_CATALOG, type Vehicle, type MaintenanceLog } from "@/lib/types";
+import { buildReminderNote, completeMatchingAlerts } from "@/lib/reminders";
 
 export const runtime = "nodejs";
 
@@ -236,6 +237,9 @@ Return JSON with these fields (use null when unknown):
       .eq("user_id", userId);
   }
 
+  // This service satisfies any older pending reminder for the same type.
+  await completeMatchingAlerts(supabase, vehicle.id, userId, extracted.service_type);
+
   // Generate next-due alert if we have a mileage interval and current mileage.
   if (catalogEntry?.mileageInterval && (extracted.mileage ?? vehicle.current_mileage) > 0) {
     const baseMileage = extracted.mileage ?? vehicle.current_mileage;
@@ -264,9 +268,14 @@ Return JSON with these fields (use null when unknown):
     .filter(Boolean)
     .join(" ");
 
-  const logReply = askMileage
+  // Every entry doubles as a checkup: surface anything due or coming soon.
+  const effectiveMileage = Math.max(extracted.mileage ?? 0, vehicle.current_mileage);
+  const reminder = await buildReminderNote(supabase, vehicle.id, effectiveMileage);
+
+  let logReply = askMileage
     ? `Logged: ${summary}. What's the current mileage?`
     : `Logged: ${summary}. ✓`;
+  if (reminder) logReply += ` ${reminder}`;
   await logChat(supabase, userId, vehicle.id, message, "log", logReply);
   return NextResponse.json({
     intent: "log",

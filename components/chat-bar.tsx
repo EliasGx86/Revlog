@@ -126,12 +126,15 @@ export default function ChatBar({ vehicleId, currentMileage }: Props) {
     if (!pendingMileagePrompt) return;
     setBusy(true);
     try {
-      await fetch("/api/chat/mileage", {
+      const res = await fetch("/api/chat/mileage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logId: pendingMileagePrompt, mileage: value, vehicleId }),
       });
-      setMessages((m) => [...m, { role: "assistant", content: `Got it — recorded at ${value.toLocaleString()} mi.` }]);
+      const json = await res.json().catch(() => ({}));
+      let content = `Got it — recorded at ${value.toLocaleString()} mi.`;
+      if (json.reminder) content += ` ${json.reminder}`;
+      setMessages((m) => [...m, { role: "assistant", content }]);
       router.refresh();
     } finally {
       setPendingMileagePrompt(null);
