@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { Profile, Vehicle, Zone } from "@/lib/types";
 import ChatBar from "@/components/chat-bar";
 import ZoneHistoryModal from "@/components/zone-history-modal";
+import VehicleInfoModal from "@/components/vehicle-info-modal";
 import { trackEvent } from "@/components/posthog-provider";
 
 // Three.js is heavy and DOM-dependent — load only on the client.
@@ -28,6 +29,7 @@ interface Props {
 export default function HomeClient({ profile, vehicle, vehicles }: Props) {
   const router = useRouter();
   const [zone, setZone] = useState<Zone | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   const [vinCopied, setVinCopied] = useState(false);
 
   function copyVin() {
@@ -48,10 +50,19 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
       {/* top bar */}
       <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 py-4">
         <div>
-          <div className="text-sm font-medium">{vehicle.year} {vehicle.make} {vehicle.model}</div>
-          <div className="text-xs text-muted">
-            {vehicle.current_mileage.toLocaleString()} mi
-          </div>
+          <button
+            onClick={() => setShowInfo(true)}
+            className="-mx-2 -my-1 rounded-md px-2 py-1 text-left transition hover:bg-surface/60"
+            aria-label="Vehicle info"
+          >
+            <div className="text-sm font-medium">
+              {vehicle.year} {vehicle.make} {vehicle.model}
+              <span className="ml-1.5 text-xs text-muted">ⓘ</span>
+            </div>
+            <div className="text-xs text-muted">
+              {vehicle.current_mileage.toLocaleString()} mi
+            </div>
+          </button>
           {(vehicle.license_plate || vehicle.vin) && (
             <div className="mt-1.5 flex items-center gap-2">
               {vehicle.license_plate && (
@@ -116,8 +127,12 @@ export default function HomeClient({ profile, vehicle, vehicles }: Props) {
 
       {/* pinned chat bar */}
       <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-5 pt-3">
-        <ChatBar vehicleId={vehicle.id} />
+        <ChatBar vehicleId={vehicle.id} currentMileage={vehicle.current_mileage} />
       </div>
+
+      {showInfo && (
+        <VehicleInfoModal vehicle={vehicle} onClose={() => setShowInfo(false)} />
+      )}
 
       {/* zone modal */}
       {zone && (

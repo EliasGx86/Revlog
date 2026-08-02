@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { trackEvent } from "@/components/posthog-provider";
 
 // Web Speech API types (browsers use the vendor-prefixed name)
@@ -20,6 +21,8 @@ interface SpeechRecognitionLike {
 
 interface Props {
   vehicleId: string;
+  /** Prefills the mileage prompt so a known odometer is one tap to confirm. */
+  currentMileage?: number;
 }
 
 interface ChatMessage {
@@ -27,7 +30,8 @@ interface ChatMessage {
   content: string;
 }
 
-export default function ChatBar({ vehicleId }: Props) {
+export default function ChatBar({ vehicleId, currentMileage }: Props) {
+  const router = useRouter();
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -106,6 +110,10 @@ export default function ChatBar({ vehicleId }: Props) {
       if (json.intent === "log" && json.askMileage) {
         setPendingMileagePrompt(json.logId);
       }
+      if (json.intent === "log") {
+        // Server data (header mileage, alerts) changed — re-render the page.
+        router.refresh();
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setMessages((m) => [...m, { role: "assistant", content: `⚠ ${msg}` }]);
@@ -124,6 +132,7 @@ export default function ChatBar({ vehicleId }: Props) {
         body: JSON.stringify({ logId: pendingMileagePrompt, mileage: value, vehicleId }),
       });
       setMessages((m) => [...m, { role: "assistant", content: `Got it — recorded at ${value.toLocaleString()} mi.` }]);
+      router.refresh();
     } finally {
       setPendingMileagePrompt(null);
       setBusy(false);
@@ -150,7 +159,11 @@ export default function ChatBar({ vehicleId }: Props) {
       )}
 
       {pendingMileagePrompt ? (
-        <MileagePrompt onSubmit={submitMileage} onSkip={() => setPendingMileagePrompt(null)} />
+        <MileagePrompt
+          initial={currentMileage}
+          onSubmit={submitMileage}
+          onSkip={() => setPendingMileagePrompt(null)}
+        />
       ) : (
         <form
           onSubmit={send}
@@ -187,13 +200,15 @@ export default function ChatBar({ vehicleId }: Props) {
 }
 
 function MileagePrompt({
+  initial,
   onSubmit,
   onSkip,
 }: {
+  initial?: number;
   onSubmit: (n: number) => void;
   onSkip: () => void;
 }) {
-  const [val, setVal] = useState("");
+  const [val, setVal] = useState(initial && initial > 0 ? String(initial) : "");
   return (
     <form
       onSubmit={(e) => {

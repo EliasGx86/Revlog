@@ -211,6 +211,18 @@ Return JSON with these fields (use null when unknown):
   // If no mileage was provided, we'll prompt the user for it inline.
   const askMileage = extracted.mileage == null;
 
+  // Keep the vehicle's odometer in sync when the message included a newer reading.
+  if (extracted.mileage != null && extracted.mileage > vehicle.current_mileage) {
+    await supabase
+      .from("vehicles")
+      .update({
+        current_mileage: extracted.mileage,
+        mileage_updated_at: new Date().toISOString(),
+      })
+      .eq("id", vehicle.id)
+      .eq("user_id", userId);
+  }
+
   // Generate next-due alert if we have a mileage interval and current mileage.
   if (catalogEntry?.mileageInterval && (extracted.mileage ?? vehicle.current_mileage) > 0) {
     const baseMileage = extracted.mileage ?? vehicle.current_mileage;

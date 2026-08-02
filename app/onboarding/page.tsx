@@ -289,6 +289,7 @@ export default function OnboardingPage() {
             <input
               id="year"
               type="number"
+              list="year-options"
               className="mt-1 w-full rounded-md border border-border bg-surface px-3 py-2"
               placeholder="e.g. 2019"
               value={year}
@@ -297,6 +298,15 @@ export default function OnboardingPage() {
               onChange={(e) => setYear(parseInt(e.target.value || "0", 10))}
               required
             />
+            {/* type to filter, or pick from the dropdown arrow */}
+            <datalist id="year-options">
+              {Array.from(
+                { length: 45 },
+                (_, i) => new Date().getFullYear() + 1 - i
+              ).map((y) => (
+                <option key={y} value={y} />
+              ))}
+            </datalist>
           </div>
           <div>
             <label htmlFor="mileage" className="text-sm text-muted">Current mileage</label>
