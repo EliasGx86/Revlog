@@ -4,7 +4,7 @@ Running log of where the project stands. Update at the end of each working sessi
 See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 [Elias Todo.md](Elias%20Todo.md) for user-side action items.
 
-## Current status (2026-08-02, end of day)
+## Current status (2026-08-03, end of day)
 
 **Live:** https://revlog-blush.vercel.app — Next 16 / React 19 in production.
 (note: `revlog.vercel.app` belongs to someone else — always use the `-blush` domain or attach a custom domain later)
@@ -40,9 +40,12 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 3. **Alert notifications** — reminders are in-chat only; push/email needs Vercel Cron + a sender (P3).
 
 ### Suggested next session
-1. Recommendations next step (BACKLOG P2) or garage grid polish for 3+ vehicles.
-2. Realistic catalog models, once Elias green-lights the budget.
-3. Road trip pre-trip checkup if Elias's spec ideas are ready (parked in BACKLOG).
+1. Follow up on Elias's phone re-check of the mobile fixes (2026-08-03a) and
+   whether trim decoded once he entered real VINs; fix whatever he flags.
+2. Confirm the forgot-password flow end-to-end once Elias sets the Supabase
+   Auth URL config (his todo #4).
+3. Recalls via the free NHTSA recall API (natural VIN follow-on, parked in
+   DATA-POINTS.md), or recommendations next step (BACKLOG P2).
 
 ## Issues & gotchas (so we don't re-learn them)
 
