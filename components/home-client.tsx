@@ -55,7 +55,8 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
 
   // Backfill: vehicles added before the initialization feature have no stock
   // specs — pull them silently on first view (once per vehicle per session;
-  // the API's rate limit backstops this).
+  // the API's rate limit backstops this). Vehicles that already have specs
+  // but a VIN and no trim get the lightweight VIN decode instead.
   useEffect(() => {
     const key = `revlog_init_${vehicle.id}`;
     if (sessionStorage.getItem(key)) return;
@@ -66,8 +67,14 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
       .select("id", { count: "exact", head: true })
       .eq("vehicle_id", vehicle.id)
       .then(({ count }) => {
-        if ((count ?? 0) > 0) return;
-        fetch("/api/vehicle/initialize", {
+        const endpoint =
+          (count ?? 0) > 0
+            ? vehicle.vin && !vehicle.trim
+              ? "/api/vehicle/decode-vin"
+              : null
+            : "/api/vehicle/initialize";
+        if (!endpoint) return;
+        fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ vehicleId: vehicle.id }),
@@ -75,15 +82,17 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
           // best-effort; the info-modal button and chat remain as fallbacks
         });
       });
-  }, [vehicle.id]);
+  }, [vehicle.id, vehicle.vin, vehicle.trim]);
 
   return (
     // dvh (not vh): mobile keyboards/browser chrome shrink the visual
     // viewport, and 100vh would push the chat bar's buttons off-screen.
     <div className="relative h-[100dvh] w-screen overflow-hidden">
       {/* top bar */}
-      <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 py-4">
-        <div>
+      <header className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between gap-2 px-4 py-4 sm:px-5">
+        {/* min-w-0 so the title/VIN block shrinks & wraps instead of pushing
+            the header wider than a phone screen */}
+        <div className="min-w-0">
           <Tip label="Vehicle info — VIN, plate, mileage, insurance">
           <button
             onClick={() => setShowInfo(true)}
@@ -92,6 +101,9 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
           >
             <div className="text-sm font-medium">
               {vehicle.year} {vehicle.make} {vehicle.model}
+              {vehicle.trim && (
+                <span className="ml-1 text-xs font-normal text-muted">{vehicle.trim}</span>
+              )}
               <span className="ml-1.5 text-xs text-muted">ⓘ</span>
             </div>
             <div className="text-xs text-muted">
@@ -100,7 +112,7 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
           </button>
           </Tip>
           {(vehicle.license_plate || vehicle.vin) && (
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               {vehicle.license_plate && (
                 <span className="rounded border border-border bg-surface/70 px-1.5 py-0.5 font-mono text-[11px] tracking-widest">
                   {vehicle.license_plate}
@@ -110,7 +122,7 @@ export default function HomeClient({ profile, vehicle, vehicles, dueZones }: Pro
                 <button
                   onClick={copyVin}
                   title="Click to copy VIN"
-                  className="font-mono text-[11px] text-muted transition hover:text-white"
+                  className="max-w-full truncate font-mono text-[11px] text-muted transition hover:text-white"
                 >
                   VIN {vehicle.vin}{vinCopied ? " ✓ copied" : ""}
                 </button>

@@ -21,6 +21,18 @@ button {
   cursor: pointer;
 }
 
+/* iOS Safari zooms the whole page in when a focused form control's font-size
+   is under 16px — and stays zoomed after, leaving the app "blown up" with the
+   edges cut off. Keep every control at ≥16px on touch devices; sm:+ screens
+   keep the compact sizes. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
 /* --- auth screens ("the garage at night") --- */
 
 /* needle: rest at 0 rpm (-225° tick ≙ 0 rotation offset), sweep to redline

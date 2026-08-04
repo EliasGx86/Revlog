@@ -132,7 +132,7 @@ export default function GloveboxModal({ vehicleId, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+        className="flex max-h-[85dvh] w-full max-w-lg flex-col rounded-2xl border border-border bg-surface p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

@@ -13,9 +13,15 @@ Things only you can do (accounts, money, judgment calls). Everything else is in
    something to the Glovebox, scan a VIN/plate with the 📷 button, tell the
    chat your insurance, and add a second vehicle to see the new
    "Initializing…" flow + customizations field. Report anything weird.
-3. **Re-check the two mobile complaints** after the latest deploy: chat bar
-   vs. the browser's bottom bar, and the header buttons (now icon-only on
-   phones). If the chat still hides behind the URL bar, screenshot it.
+3. **Re-check mobile on your phone** after the latest deploy. The big fix:
+   iOS was zooming the whole page every time you tapped an input (fonts under
+   16px trigger it) and never zooming back out — that's the "blown up / cut
+   off" feeling. Also fixed: all modals now scroll instead of getting cut
+   off, and the header VIN line wraps. If anything still looks off,
+   screenshot it.
+4. **Check your trim appeared** — open the app once per vehicle; if a VIN is
+   on file, the trim (LX/EX-style submodel) decodes automatically and shows
+   next to the model name + in the info modal. Tell me if it decoded wrong.
 
 ## Decisions when you're ready
 

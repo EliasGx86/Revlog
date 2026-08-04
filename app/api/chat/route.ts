@@ -524,7 +524,7 @@ async function handleQuery(
       {
         role: "system",
         content: `You are RevLog, the user's car maintenance assistant.
-Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}, currently ${vehicle.current_mileage.toLocaleString()} mi.
+Vehicle: ${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim} (trim decoded from VIN — use it for trim-specific answers)` : ""}, currently ${vehicle.current_mileage.toLocaleString()} mi.
 Today's date is ${new Date().toISOString().slice(0, 10)}.
 
 Answer questions about their history using ONLY the data below — never invent dates, mileages, product details, or policy info; if it isn't there, say so plainly.

@@ -74,7 +74,26 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
   }
 
   const rows: { label: string; value: React.ReactNode; copyValue?: string }[] = [
-    { label: "Vehicle", value: `${vehicle.year} ${vehicle.make} ${vehicle.model}` },
+    {
+      label: "Vehicle",
+      value: `${vehicle.year} ${vehicle.make} ${vehicle.model}${vehicle.trim ? ` ${vehicle.trim}` : ""}`,
+    },
+    ...(vehicle.trim
+      ? [{
+          label: "Trim",
+          value: (
+            <span className="inline-flex items-center gap-1.5">
+              {vehicle.trim}
+              <span
+                title="Decoded from your VIN — the submodel parts stores ask for"
+                className="rounded border border-border px-1 text-[9px] uppercase tracking-wide text-muted/80"
+              >
+                vin
+              </span>
+            </span>
+          ),
+        }]
+      : []),
     { label: "Body type", value: BODY_LABELS[vehicle.body_type] },
     {
       label: "Color",
@@ -113,7 +132,7 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+        className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
@@ -134,8 +153,8 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
         <dl className="mt-4 divide-y divide-border">
           {rows.map((r) => (
             <div key={r.label} className="flex items-center justify-between gap-4 py-2.5">
-              <dt className="text-sm text-muted">{r.label}</dt>
-              <dd className="flex items-center gap-2 text-sm">
+              <dt className="shrink-0 text-sm text-muted">{r.label}</dt>
+              <dd className="flex min-w-0 items-center gap-2 break-all text-right text-sm">
                 {r.value}
                 {r.copyValue && (
                   <button
@@ -155,7 +174,7 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
           <dl className="mt-1 divide-y divide-border">
             {specs.map((s) => (
               <div key={s.name} className="flex items-center justify-between gap-4 py-2">
-                <dt className="flex items-center gap-1.5 text-sm text-muted">
+                <dt className="flex shrink-0 items-center gap-1.5 text-sm text-muted">
                   {s.label}
                   {s.source === "oem" && (
                     <span
@@ -166,11 +185,11 @@ export default function VehicleInfoModal({ vehicle, onClose }: Props) {
                     </span>
                   )}
                 </dt>
-                <dd className="flex items-center gap-2 text-sm">
-                  {s.value}
+                <dd className="flex min-w-0 items-center gap-2 text-right text-sm">
+                  <span className="min-w-0 break-words">{s.value}</span>
                   <button
                     onClick={() => copy(s.label, s.value)}
-                    className="rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:text-white"
+                    className="shrink-0 rounded border border-border px-1.5 py-0.5 text-xs text-muted hover:text-white"
                   >
                     {copied === s.label ? "Copied ✓" : "Copy"}
                   </button>

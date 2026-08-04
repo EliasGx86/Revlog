@@ -81,6 +81,9 @@ export default function GarageClient({ vehicles }: Props) {
                   />
                   <span className="font-medium">
                     {v.year} {v.make} {v.model}
+                    {v.trim && (
+                      <span className="ml-1 text-xs font-normal text-muted">{v.trim}</span>
+                    )}
                   </span>
                 </div>
                 <div className="mt-1 text-xs text-muted">
@@ -158,6 +161,7 @@ function EditVehicleModal({
     setErr(null);
     const supabase = createSupabaseBrowserClient();
     const newMileage = parseInt(mileage || "0", 10);
+    const newVin = vin.trim().toUpperCase() || null;
     const { error } = await supabase
       .from("vehicles")
       .update({
@@ -170,13 +174,21 @@ function EditVehicleModal({
           ? { mileage_updated_at: new Date().toISOString() }
           : {}),
         license_plate: plate.trim().toUpperCase() || null,
-        vin: vin.trim().toUpperCase() || null,
+        vin: newVin,
       })
       .eq("id", vehicle.id);
     setSaving(false);
     if (error) {
       setErr(error.message);
       return;
+    }
+    // New/changed VIN → refresh the decoded trim + stock facts (best-effort).
+    if (newVin && newVin !== vehicle.vin) {
+      fetch("/api/vehicle/decode-vin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehicleId: vehicle.id }),
+      }).catch(() => {});
     }
     onSaved();
   }
@@ -191,7 +203,7 @@ function EditVehicleModal({
     >
       <form
         onSubmit={save}
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl"
+        className="max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-surface p-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">

@@ -90,6 +90,27 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 
 ## Session log
 
+- **2026-08-03a** — Three asks from Elias: (1) **VIN → trim decode** — new
+  [lib/vin.ts](lib/vin.ts) hits the free NHTSA vPIC API (no key); trim
+  (LX/EX-L…) saved to `vehicles.trim` (migration 0010, applied), shown in the
+  home header, info modal ("vin" badge), garage cards, and fed to the chat
+  brain + spec initializer (trim-correct values instead of "most common
+  trim"). Decoded engine/drivetrain/transmission/fuel also seed as oem specs.
+  Light `/api/vehicle/decode-vin` route (no LLM) backfills trim for vehicles
+  that already have specs (home-client triggers it once per session) and runs
+  after a VIN is added/edited in the garage. Initialize + decode now both
+  refuse to overwrite user-source specs with stock values. (2) **Mobile
+  "blown up" fix** — root cause: every input is <16px, so iOS Safari zooms
+  the page on focus and never zooms back; global CSS now forces ≥16px form
+  controls on coarse pointers. All six modals capped at `max-h-[85dvh]` +
+  scroll (info/zone/account had NO cap — long content was simply cut off);
+  header VIN row wraps/truncates instead of overflowing 375px screens; info
+  modal spec rows wrap long values. (3) **[DATA-POINTS.md](DATA-POINTS.md)**
+  — canonical inventory of every tracked field (9 identity + 16 named specs +
+  unlimited chat specs + 12 service types + insurance + glovebox) with
+  marketing angles; update it when adding fields. NOT yet verified on a real
+  phone — Elias re-checks after deploy.
+
 - **2026-08-02l** — Night wrap: cleared .dev-snapshots (8 MB of session
   screenshots), rewrote the Current Status / Features sections to match
   reality (Next 16 live, Elias active), pruned BACKLOG of everything shipped

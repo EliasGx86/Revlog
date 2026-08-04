@@ -3,7 +3,8 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getOpenAI, CHAT_MODEL } from "@/lib/openai";
 import { overLimit, recordApiEvent } from "@/lib/rate-limit";
-import type { Vehicle } from "@/lib/types";
+import { decodeVin, decodeToSpecs } from "@/lib/vin";
+import type { Vehicle, VehicleSpec } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
   }
 
+  // VIN on file → decode trim + hardware facts (free NHTSA API) so the spec
+  // pull is trim-correct instead of "most common trim". Best-effort.
+  const decoded = vehicle.vin ? await decodeVin(vehicle.vin) : null;
+  if (decoded?.trim && decoded.trim !== vehicle.trim) {
+    await supabase.from("vehicles").update({ trim: decoded.trim }).eq("id", vehicle.id);
+  }
+  const decodedLine = decoded
+    ? `\nDecoded from the VIN (authoritative for THIS exact vehicle): ${[
+        decoded.trim && `trim "${decoded.trim}"`,
+        decoded.engine && `engine ${decoded.engine}`,
+        decoded.driveType && `drivetrain ${decoded.driveType}`,
+        decoded.transmission && `transmission ${decoded.transmission}`,
+        decoded.fuelType && `fuel ${decoded.fuelType}`,
+      ]
+        .filter(Boolean)
+        .join(", ")}. Use these to pick trim-correct values.\n`
+    : "";
+
   const openai = getOpenAI();
   const completion = await openai.chat.completions.create({
     model: CHAT_MODEL,
@@ -68,7 +87,8 @@ export async function POST(req: Request) {
     messages: [
       {
         role: "system",
-        content: `You are an automotive reference. For a ${vehicle.year} ${vehicle.make} ${vehicle.model}, return the OEM/stock specs you are REASONABLY CONFIDENT about — omit anything you'd be guessing at. Trim-level-dependent values: give the most common trim's value.
+        content: `You are an automotive reference. For a ${vehicle.year} ${vehicle.make} ${vehicle.model}${decoded?.trim ? ` ${decoded.trim}` : vehicle.trim ? ` ${vehicle.trim}` : ""}, return the OEM/stock specs you are REASONABLY CONFIDENT about — omit anything you'd be guessing at. Trim-level-dependent values: ${decoded?.trim || vehicle.trim ? "use the stated trim's value" : "give the most common trim's value"}.
+${decodedLine}
 
 Candidate fields (snake_case name → label):
 oil_type → "Oil type" (e.g. "0W-20 full synthetic")
@@ -97,13 +117,30 @@ ${body.customizations?.trim() ? `The owner describes these aftermarket customiza
   try {
     parsed = SpecsSchema.parse(JSON.parse(completion.choices[0].message.content || "{}"));
   } catch {
-    return NextResponse.json({ specs: 0 });
+    parsed = { specs: [] };
   }
 
-  if (parsed.specs.length) {
+  // Add VIN-decoded hardware facts the model didn't already cover.
+  const covered = new Set(parsed.specs.map((s) => s.name));
+  for (const s of decoded ? decodeToSpecs(decoded) : []) {
+    if (!covered.has(s.name)) parsed.specs.push({ ...s, source: "oem" });
+  }
+
+  // Never let a stock value overwrite a spec the user stated themselves.
+  const { data: existing } = await supabase
+    .from("vehicle_specs")
+    .select("name,source")
+    .eq("vehicle_id", vehicle.id)
+    .returns<Pick<VehicleSpec, "name" | "source">[]>();
+  const userOwned = new Set(
+    (existing ?? []).filter((s) => s.source === "user").map((s) => s.name)
+  );
+  const rows = parsed.specs.filter((s) => s.source === "user" || !userOwned.has(s.name));
+
+  if (rows.length) {
     const now = new Date().toISOString();
     await supabase.from("vehicle_specs").upsert(
-      parsed.specs.map((s) => ({
+      rows.map((s) => ({
         vehicle_id: vehicle.id,
         user_id: user.id,
         name: s.name,
@@ -116,5 +153,5 @@ ${body.customizations?.trim() ? `The owner describes these aftermarket customiza
     );
   }
 
-  return NextResponse.json({ specs: parsed.specs.length });
+  return NextResponse.json({ specs: rows.length, trim: decoded?.trim ?? vehicle.trim ?? null });
 }

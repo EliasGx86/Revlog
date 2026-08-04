@@ -28,6 +28,8 @@ export interface Vehicle {
   year: number;
   color: string;
   body_type: BodyType;
+  /** Trim/submodel (LX, EX-L…) decoded from the VIN — what parts stores ask for. */
+  trim: string | null;
   vin: string | null;
   license_plate: string | null;
   current_mileage: number;
