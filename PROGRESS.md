@@ -90,6 +90,21 @@ See [BACKLOG.md](BACKLOG.md) for the prioritized list of what's next, and
 
 ## Session log
 
+- **2026-08-03b** — Auth & account round (Elias's mid-session asks):
+  **forgot password** (/forgot-password sends the Supabase reset email;
+  /reset-password — public in middleware so the ?code= survives — waits for
+  the recovery session, then updateUser; PKCE means the link must be opened
+  in the requesting browser). **Duplicate sign-up notice** (handles both
+  Supabase modes: explicit "already registered" error and the
+  empty-identities obfuscated success). **Password eye toggle**
+  (AuthPasswordField in auth-shell, used on sign-in/up/reset).
+  **App versioning**: [lib/version.ts](lib/version.ts) `APP_VERSION`
+  ("0.5.0-beta", package.json synced) shown in the account modal — bump each
+  deploy batch. Also: manual VIN entry now validated (17 chars, no I/O/Q —
+  Elias's test vehicles had junk VINs like "TEST" stored); junk VINs decode
+  to null safely. ⚠ Supabase Auth URL config must allowlist
+  /reset-password (Elias Todo) or the reset email links won't land right.
+
 - **2026-08-03a** — Three asks from Elias: (1) **VIN → trim decode** — new
   [lib/vin.ts](lib/vin.ts) hits the free NHTSA vPIC API (no key); trim
   (LX/EX-L…) saved to `vehicles.trim` (migration 0010, applied), shown in the

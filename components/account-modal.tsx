@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Profile, Vehicle } from "@/lib/types";
+import { APP_VERSION } from "@/lib/version";
 
 // The user's own info at a glance: account, membership, garage summary.
 // Sign out lives here too (declutters the home header on phones).
@@ -35,6 +36,10 @@ export default function AccountModal({ profile, vehicles, onClose }: Props) {
     {
       label: "Garage",
       value: `${vehicles.length} vehicle${vehicles.length === 1 ? "" : "s"}`,
+    },
+    {
+      label: "App version",
+      value: <span className="font-mono text-xs">v{APP_VERSION}</span>,
     },
   ];
 

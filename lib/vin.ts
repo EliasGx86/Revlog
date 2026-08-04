@@ -21,6 +21,18 @@ export interface VinDecode {
 
 const VPIC_URL = "https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues";
 
+/**
+ * Validate a manually-typed VIN (the OCR path already enforces this).
+ * Returns an error message, or null when the VIN is empty or plausible.
+ */
+export function vinError(vin: string): string | null {
+  if (!vin) return null;
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) {
+    return "A VIN is 17 letters/digits with no I, O, or Q — double-check it, or leave the field blank.";
+  }
+  return null;
+}
+
 function clean(v: unknown): string | null {
   const s = typeof v === "string" ? v.trim() : "";
   return s && s !== "Not Applicable" ? s : null;

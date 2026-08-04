@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { Vehicle } from "@/lib/types";
+import { vinError } from "@/lib/vin";
 
 // Garage grid: card per vehicle with open / edit / delete. Editing covers the
 // facts that change (year, color, mileage, plate, VIN, make/model text) —
@@ -157,11 +158,16 @@ function EditVehicleModal({
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setErr(null);
+    const newVin = vin.trim().toUpperCase() || null;
+    const vinProblem = newVin ? vinError(newVin) : null;
+    if (vinProblem) {
+      setErr(vinProblem);
+      return;
+    }
+    setSaving(true);
     const supabase = createSupabaseBrowserClient();
     const newMileage = parseInt(mileage || "0", 10);
-    const newVin = vin.trim().toUpperCase() || null;
     const { error } = await supabase
       .from("vehicles")
       .update({

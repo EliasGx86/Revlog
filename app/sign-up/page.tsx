@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import AuthShell, { AuthField, AuthSwitchLink } from "@/components/auth/auth-shell";
+import AuthShell, { AuthField, AuthPasswordField, AuthSwitchLink } from "@/components/auth/auth-shell";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function SignUpPage() {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -25,6 +25,15 @@ export default function SignUpPage() {
       },
     });
     setLoading(false);
+    const alreadyExists =
+      // confirmations off → explicit error; confirmations on → "obfuscated"
+      // success with an empty identities array
+      (error && /already registered/i.test(error.message)) ||
+      (!error && data.user && (data.user.identities?.length ?? 0) === 0);
+    if (alreadyExists) {
+      setErr("An account with that email already exists — sign in below instead (or use \"Forgot password?\").");
+      return;
+    }
     if (error) {
       setErr(error.message);
       return;
@@ -46,9 +55,8 @@ export default function SignUpPage() {
           autoComplete="email"
           required
         />
-        <AuthField
+        <AuthPasswordField
           label="Password"
-          type="password"
           placeholder="min 8 characters"
           minLength={8}
           value={password}

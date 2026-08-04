@@ -2,7 +2,18 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // /dev pages 404 in production (see app/dev/*) but skip auth in development.
-const PUBLIC_PATHS = ["/sign-in", "/sign-up", "/auth", "/api/stripe/webhook", "/dev", "/api/dev"];
+const PUBLIC_PATHS = [
+  "/sign-in",
+  "/sign-up",
+  "/forgot-password",
+  // must be public: the reset email lands here with a ?code= that the browser
+  // client exchanges for a session — a server redirect would eat the code
+  "/reset-password",
+  "/auth",
+  "/api/stripe/webhook",
+  "/dev",
+  "/api/dev",
+];
 
 export async function middleware(req: NextRequest) {
   let res = NextResponse.next({ request: { headers: req.headers } });

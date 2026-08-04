@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import AuthShell, { AuthField, AuthSwitchLink } from "@/components/auth/auth-shell";
+import Link from "next/link";
+import AuthShell, { AuthField, AuthPasswordField, AuthSwitchLink } from "@/components/auth/auth-shell";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -40,15 +41,22 @@ export default function SignInPage() {
           autoComplete="email"
           required
         />
-        <AuthField
+        <AuthPasswordField
           label="Password"
-          type="password"
           placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
           required
         />
+        <p className="-mt-2 text-right">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-muted underline decoration-border underline-offset-4 transition hover:text-white"
+          >
+            Forgot password?
+          </Link>
+        </p>
         {err && <p className="text-sm text-red-400">{err}</p>}
         <button
           type="submit"

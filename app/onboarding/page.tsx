@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BodyType } from "@/lib/types";
 import { VEHICLE_CATALOG } from "@/lib/vehicle-catalog";
+import { vinError } from "@/lib/vin";
 
 // Downscale a photo client-side so uploads stay small (phone photos are huge).
 async function fileToDataUrl(file: File, maxDim = 1280): Promise<string> {
@@ -219,6 +220,11 @@ export default function OnboardingPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
+    const vinProblem = vinError(vin.trim().toUpperCase());
+    if (vinProblem) {
+      setErr(vinProblem);
+      return;
+    }
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
